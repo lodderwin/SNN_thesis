@@ -1,0 +1,315 @@
+from black import NothingChanged
+from matplotlib.pyplot import fill
+import config as config
+
+import torch
+from gym import Env
+
+from innovation import Innovation
+from network import Network
+from gene import Gene
+from species import Species, find_all_routes, place_weights, clean_array
+from network_viz import draw_net
+import networkx as nx
+import numpy as np
+import math
+import random
+import matplotlib.pyplot as plt
+
+# objective function in neat Env
+#genome = network
+
+from snn_pytorch_mod import SNN
+
+from visualize import DrawNN
+
+
+class NEAT(object):
+
+    def __init__(self):
+        self.solved = False
+        self.solution_genome = None
+
+        self.population_N = config.POPULATION
+
+        self.initial_genome_topology = (config.INPUT_NEURONS, config.OUTPUT_NEURONS)
+
+        self.species_N = 0
+        self.species = {}
+
+        self.population_fitness_avg = 0
+
+        self.innovation = Innovation()
+
+        initial_genome = Network(self.initial_genome_topology, self.innovation)
+        self.create_new_species(initial_genome, self.population_N)
+
+
+
+        self.best_species = None
+    def start_evolutionary_process(self):
+        i = 0
+        # while not self.solved:
+        while i<500:
+
+            avg_fitness_scores = {}
+            # Run the current generation for each species
+            div_training = [np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5)]
+
+            for s_id, s in self.species.items():
+                avg_fitness = s.run_generation(i, div_training)
+                if avg_fitness != None:
+                    avg_fitness_scores[s_id] = avg_fitness
+                    print('aaa', avg_fitness)
+
+            if (len(avg_fitness_scores) == 0):
+                print("\n\nAll species have gone extinct!\n\n")
+                exit()
+
+            #add CMA-ES here
+
+            
+            if config.DYNAMIC_POPULATION:
+                self.assign_species_populations_for_next_generation(avg_fitness_scores)
+            # Evolve (create the next generation) for each species
+            for s_id, s in self.species.items():
+                s.evolve()   
+           
+            # Create new species from evolved current species
+            if config.SPECIATION:
+                self.perform_speciation()
+            
+            # break
+            i+=1
+
+        # Need to potentially set this somewhere...
+            print('bbb', i)
+        self.best_species = max(avg_fitness_scores, key=avg_fitness_scores.get)
+        # find best genome
+        # best_performace = avg_fitness_scores[best_species]
+
+        #   [x.fitness for x in self.species[best_species].genomes.values()]
+
+        return self.solution_genome
+
+    def assign_species_populations_for_next_generation(self, avg_fitness_scores):
+        if len(avg_fitness_scores) == 1:
+            return
+
+        sorted_species_ids = sorted(avg_fitness_scores, key=avg_fitness_scores.get)
+
+        # If any species were culled... reassign population to best species.
+        active_pop = self.get_active_population()
+        if active_pop < self.population_N:
+            print("Active population:", active_pop)
+            # print(sorted_species_ids)
+            self.species[sorted_species_ids[0]].increment_population(self.population_N-active_pop)
+
+        # Handle all other population changes.  # DIT KAN FOUT ZIJN! moet verhouding van species fitness tov totale gem fitness stijgen of dalen
+        pop_change = int(math.floor(len(avg_fitness_scores)/2.0))
+        start = 0
+        end = len(sorted_species_ids) - 1
+        while (start < end): 
+            self.species[sorted_species_ids[start]].decrement_population(pop_change)
+            self.species[sorted_species_ids[end]].increment_population(pop_change)
+            start += 1
+            end -= 1
+            pop_change -= 1
+            print('stuck here?')
+
+    
+    def perform_speciation(self):
+        # here also runtime errror:
+        # for s_id, s in self.species.items():
+        for s_id, s in list(self.species.items()):
+            # Only want to speciate and find evolve from active species
+            if s.active:
+                # changed because of rutimeerror: RuntimeError: dictionary changed size during iteration
+                # for genome_index, genome in s.genomes.items():
+                #     if not genome.is_compatible(s.species_genome_representative):
+                #         self.assign_genome(genome, s_id)
+                #         s.del ete_genome(genome_index)
+
+                for genome_index, genome in list(s.genomes.items()):
+                    if not genome.is_compatible(s.species_genome_representative):
+                        self.assign_genome(genome, s_id)
+                        s.delete_genome(genome_index)
+
+                #hier gaat wat mis
+    def assign_genome(self, genome, origin_species_id):
+        # RuntimeError: dictionary changed size during iteration
+        # for s_id, s in self.species.items():
+        #     if genome.is_compatible(s.species_genome_representative):
+        #         # If we add to dead species, it didn't deserve to live anyway
+        #         s.add_genome(genome)
+        #         return
+        
+        for s_id, s in list(self.species.items()):
+            if genome.is_compatible(s.species_genome_representative):
+                # If we add to dead species, it didn't deserve to live anyway
+                s.add_genome(genome)
+                return
+
+        # Not my favorite way of deciding on new populations...
+        if config.DYNAMIC_POPULATION:
+            new_species_pop = int(math.floor(self.species[origin_species_id].species_population/2.0))
+            print('new species pop:', new_species_pop)
+            origin_species_pop = int(math.ceil(self.species[origin_species_id].species_population/2.0))
+            self.species[origin_species_id].set_population(origin_species_pop)
+        else:
+            new_species_pop = self.population_N
+
+        self.create_new_species(genome, new_species_pop)
+
+
+    def create_new_species(self, initial_species_genome, population):
+        self.species[self.species_N] = Species(self.species_N, population, initial_species_genome)
+        self.species_N += 1
+
+
+    def get_active_population(self):
+        active_population = 0
+        for species in self.species.values():
+            if species.active:
+                active_population += species.species_population
+
+        return active_population
+
+a = NEAT()
+a.start_evolutionary_process()
+
+# matrix = find_all_routes(a.species[5].genomes[2])
+# matrix = clean_array(matrix)
+# model = place_weights(matrix,a.species[5].genomes[2] )
+# draw_nn = DrawNN(model)
+# draw_nn.draw()
+
+
+#er gaat iets fout met de volgorde van neuron en genes
+#%%
+
+
+
+
+# the_one = a.species[3].genomes[2]
+# b = clean_array(find_all_routes(the_one))
+# place_weights(b, the_one)
+
+
+
+
+
+#     return model
+#%%
+
+
+
+
+
+    # place the neurons with only one possible position and redo cycle until only neuron with 2 or more possible positions exist
+    
+    # with np.where, see if distance between neurons (thus genes) are widely apart and place weights 1
+
+
+        
+
+        
+# check check check
+
+# find good network to check algorithm
+
+
+
+
+# draw_net(a.species[3].genomes[5])
+
+# find_all_routes(a.species[3].genomes[2])
+# nx.draw_networkx(a.species[3].genomes[5].networkx_network)
+# p = nx.shortest_path(a.species[1].genomes[5].networkx_network) 
+# nx.dag_longest_path(a.species[1].genomes[5].networkx_network, weight='weight')
+# take into account disabled genes
+# delete all disabled genes for route calculations
+
+
+#not in correct order oi
+
+
+# find_all_routes(a.species[0].genomes[0])
+
+# class Graph:
+ 
+#     def __init__(self, V):
+#         self.V = V
+#         self.adj = [[] for i in range(V)]
+ 
+#     def addEdge(self, u, v):
+ 
+#         # Add v to u’s list.
+#         self.adj[u].append(v)
+ 
+#     # Returns count of paths from 's' to 'd'
+#     def countPaths(self, s, d):
+ 
+#         # Mark all the vertices
+#         # as not visited
+#         visited = [False] * self.V
+ 
+#         # Call the recursive helper
+#         # function to print all paths
+#         pathCount = [0]
+#         self.countPathsUtil(s, d, visited, pathCount)
+#         return pathCount[0]
+ 
+#     # A recursive function to print all paths
+#     # from 'u' to 'd'. visited[] keeps track
+#     # of vertices in current path. path[]
+#     # stores actual vertices and path_index
+#     # is current index in path[]
+#     def countPathsUtil(self, u, d,
+#                        visited, pathCount):
+#         visited[u] = True
+ 
+#         # If current vertex is same as
+#         # destination, then increment count
+#         if (u == d):
+#             pathCount[0] += 1
+ 
+#         # If current vertex is not destination
+#         else:
+ 
+#             # Recur for all the vertices
+#             # adjacent to current vertex
+#             i = 0
+#             while i < len(self.adj[u]):
+#                 if (not visited[self.adj[u][i]]):
+#                     self.countPathsUtil(self.adj[u][i], d,
+#                                         visited, pathCount)
+#                 i += 1
+ 
+#         visited[u] = False
+ 
+ 
+# # Driver Code
+# g = Graph(4)
+# g.addEdge(0, 1)
+# g.addEdge(0, 2)
+# g.addEdge(0, 3)
+# g.addEdge(2, 0)
+# g.addEdge(2, 1)
+# g.addEdge(1, 3)
+
+# s = 2
+# d = 3
+# print(g.countPaths(s, d))
+
+# a.species[0].genomes[0].neurons[0].id
+
+
+# for visualization
+# list of input neurons: [x.id for x in a.species[0].genomes[0].input_neurons]
+# list of output neurons [x.id for x in a.species[0].genomes[0].output_neurons]
+
+
+
+
+# %%

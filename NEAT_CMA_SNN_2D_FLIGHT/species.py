@@ -42,14 +42,42 @@ class objective:
         x = torch.tensor([D_plus, D_min, D_delta_plus, D_delta_min, ref_div_node])
 
         return x
-    def objective_function_NEAT(self, model, ref_div):  # add prob here
+
+
+    def spike_encoder_div(self, OF_lst, prob_ref_div, prob_ref_wx):
+        #current encoder
+        D_plus = bool(OF_lst[-1][2]>0.) * 1.
+        D_min = bool(OF_lst[-1][2]<0.) * 1.
+
+        D_delta_plus = bool(OF_lst[-1][2]>OF_lst[-2][2]) * 1.
+        D_delta_min = bool(OF_lst[-1][2]<OF_lst[-2][2]) * 1.
+####        
+        ref_div_node = bool(np.random.uniform()>=(1-prob_ref_div))
+####
+
+        wx_plus = bool(OF_lst[-1][0]>0.) * 1.
+        wx_min = bool(OF_lst[-1][0]<0.) * 1.
+
+        wx_delta_plus = bool(OF_lst[-1][0]>OF_lst[-2][0]) * 1.
+        wx_delta_min = bool(OF_lst[-1][0]<OF_lst[-2][0]) * 1.
+####        
+        ref_wx_node = bool(np.random.uniform()>=(1-prob_ref_wx))
+####
+
+        x = torch.tensor([D_plus, D_min, D_delta_plus, D_delta_min, ref_div_node, wx_plus, wx_min, wx_delta_plus, wx_delta_min, ref_wx_node])
+
+        return x
+
+    def objective_function_NEAT(self, model, ref_div, ref_wx):  # add prob here
 
         steps=100000
         
         mav_model = model
         # self.environment.ref_div = prob_ref*2
         self.environment.ref_div = ref_div
-        prob_ref = self.environment.ref_div/2.
+        self.environment.ref_wx = ref_wx
+        prob_ref_div = self.environment.ref_div/2.
+        prob_ref_wx = self.environment.ref_wx/2.
 
         self.environment.reset()
         divs_lst = []
@@ -57,7 +85,7 @@ class objective:
 
         reward_cum = 0
         for step in range(steps):
-            encoded_input = self.position_encoder(list(self.environment.obs)[-2:], prob_ref)
+            encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
 
 
             # print(encoded_input)
@@ -75,13 +103,13 @@ class objective:
         mav_model.reset()    
 
         # time.sleep(0.1)
-        plt.plot(divs_lst, c='#4287f5')
-        plt.plot(ref_lst, c='#f29b29')
+        # plt.plot(divs_lst, c='#4287f5')
+        # plt.plot(ref_lst, c='#f29b29')
 
         
-        plt.ylabel('height (m)')
-        plt.xlabel('timesteps (0.02s)')
-        plt.title('Divergence: '+ str(ref_div))
+        # plt.ylabel('height (m)')
+        # plt.xlabel('timesteps (0.02s)')
+        # plt.title('Divergence: '+ str(ref_div))
         # plt.plot(divs_lst)
         
         # figure(figsize=(8, 6), dpi=80)
@@ -92,7 +120,7 @@ class objective:
         print(reward_cum, self.environment.state[0], )
         return reward_cum
     
-    def objective_function_CMAES(self, x, ref_div, genome):  # add prob here
+    def objective_function_CMAES(self, x, ref_div, ref_wx, genome):  # add prob here
         # for i in [1.0, 1.5]:
         # ref_div = i
         steps=100000
@@ -111,7 +139,9 @@ class objective:
 
         # self.environment.ref_div = prob_ref*2
         self.environment.ref_div = ref_div
-        prob_ref = self.environment.ref_div/2.
+        self.environment.ref_wx = ref_wx
+        prob_ref_div = self.environment.ref_div/2.
+        prob_ref_wx = self.environment.ref_wx/2.
 
         self.environment.reset()
         divs_lst = []
@@ -120,7 +150,7 @@ class objective:
 
         reward_cum = 0
         for step in range(steps):
-            encoded_input = self.position_encoder(list(self.environment.obs)[-2:], prob_ref)
+            encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
             # print(encoded_input)
             thrust_setpoint = mav_model(encoded_input.float()) 
             # print(thrust_setpoint)           
@@ -129,28 +159,28 @@ class objective:
             self.environment.render()
             if done:
                 break
-            divs_lst.append(self.environment.state[0])
+            divs_lst.append(self.environment.state[2][0])
             ref_lst.append(self.environment.height_reward)
             # divs_lst.append(self.environment.thrust_tc)
         
         mav_model.reset()    
 
         # time.sleep(0.1)
-        plt.plot(divs_lst, c='#4287f5')
-        plt.plot(ref_lst, c='#f29b29')
+        # plt.plot(divs_lst, c='#4287f5')
+        # plt.plot(ref_lst, c='#f29b29')
 
         
-        plt.ylabel('height (m)')
-        plt.xlabel('timesteps (0.02s)')
-        plt.title('Divergence: '+ str(ref_div))
+        # plt.ylabel('height (m)')
+        # plt.xlabel('timesteps (0.02s)')
+        # plt.title('Divergence: '+ str(ref_div))
         # plt.plot(divs_lst)
         
         # figure(figsize=(8, 6), dpi=80)
         # plt.show()
-        plt.savefig('pres_1.png')
+        # plt.savefig('pres_1.png')
         # plt.show()
         reward_cum = self.environment.reward
-        print(reward_cum, self.environment.state[0], )
+        print(reward_cum, self.environment.state[2])
         return reward_cum
 
 def find_all_routes(genome):
@@ -346,7 +376,7 @@ def place_weights(neuron_matrix, genome):
     # list(mydict.keys())[list(mydict.values()).index(16)]
 
     # print(list(gene_dct.keys()))
-    model = SNN(neurons_lst[:-1], 1)
+    model = SNN(neurons_lst[:-1], 4)
     # create function in model to return the name of the layers!
     # neuron's already passed :
     # all input neurons oi
@@ -366,7 +396,7 @@ def place_weights(neuron_matrix, genome):
         left_nodes = neuron_matrix[:,layer]
         left_nodes = left_nodes[left_nodes!=0]
         # print(left_nodes, right_nodes)
-        fill_array = np.full((len(right_nodes), len(left_nodes)), 0.002)
+        fill_array = np.full((len(right_nodes), len(left_nodes)), 0.0002)
         # fill_array_boolean = np.full((len(right_nodes), len(left_nodes)), False)
         for right_node_pos in range(len(right_nodes)):
             for left_node_pos in range(len(left_nodes)):
@@ -400,7 +430,7 @@ def place_weights(neuron_matrix, genome):
                     #non specifieke door paas, hoge decay, hoge threshold
                     # decay_layer.append(0.1)
                     # threshold_layer.append(1.0)
-                    decay = 0.1
+                    decay = 0.01
                     threshold = 1.0
 
             decay_layer.append(decay)

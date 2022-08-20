@@ -140,14 +140,12 @@ class QuadHover(gym.Env):
             if self.state[0] == self.max_h :
                 # self.reward = self.reward + np.abs((self.max_t - self.t) * self.max_h)
 
-                t_adm = self.t
                 while self.height_reward >= self.min_h:
                     self.height_reward = self.height_reward - self.height_reward/2*self.dt
                     self.reward = self.reward + np.abs(self.dt * (self.max_h- self.height_reward))
 
                 # self.reward = self.reward + np.abs((t_adm - self.t) * self.max_h)
             if np.abs(self.state[0] - self.min_h)<0.01:
-                t_adm = self.t
                 while self.height_reward >= self.min_h:
                     self.height_reward = self.height_reward - self.height_reward/2*self.dt
                     # self.reward = self.reward + np.abs(self.height_reward/(self.height_reward/4) *self.height_reward *0.5)#dit is nog fout

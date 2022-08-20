@@ -30,7 +30,8 @@ class LandingEnv3D:
         obs_noise_std=0.0,
         obs_noise_p_std=0.0,
         wind_std=0.0,
-        state_0=[0, 0, 3, 0, 0, 0, 0, 0, 0, G],
+        state_0=[0, 0, 5, 0, 0, 0, 0, 0, 0, G],
+        h_blind=6.,
         gains=[6, 6, 3.0],
         dt=0.02,
         seed=None,
@@ -73,9 +74,12 @@ class LandingEnv3D:
         self.ref_div = ref_div
         self.ref_wx = ref_wx
 
+
         self.reward = 0
         self.height_reward = state_0[2]
         self.forward_reward = 0.
+
+        self.h_blind = h_blind
 
 
     def _checks(self):
@@ -92,27 +96,6 @@ class LandingEnv3D:
         assert (self._param["state bounds"][1] > self._param["state bounds"][0]).all()
         assert self._param["time bound"] > 0.0
 
-    def reset(self):
-        # Initial state
-        self.state = self.param["state 0"].copy() 
-        # starting state: x, y, z, vx, vy, vz, phi, theta, psi, thrust
-        self.wind = np.zeros((3, 1))  # wind in three directions
-        self.act = np.zeros((3, 1))  #roll pitch thrust
-
-        # Circular array for dealing with delayed observations
-        self.obs = deque([[0.0, 0.0, 0.0]], maxlen=self.param["obs delay"] + 1)
-        self.obs_gt = np.zeros(3)   #true obs with noise
-
-        # Counting variables
-        self.done = False
-        self.steps = 0
-        self.t = 0.0
-
-        # Fill up observations
-        for _ in range(self.param["obs delay"] + 1):
-            self._get_obs()
-
-        return self.obs[0]
 
     def set_param(self, param):
         # Check for keys
@@ -125,12 +108,14 @@ class LandingEnv3D:
 
     def step(self, act):
         # Check if already done last time
-        if self.done:
-            return self.obs[self.steps], self.reward, self.done
+        # if self.done:
+        #     return self.obs[self.steps], self.reward, self.done
 
         # Input act is in (-1, 1), scaled with 'act high'
         # Offset G later!
         self.act = (act.clip(-1.0, 1.0) * self._param["act high"]).reshape(-1, 1)
+        # print(self.act)
+        #TODO: add clamp for thrust and pitch
 
         # Action was taken based on previous observation/state, so now increment step
         self.steps += 1
@@ -138,6 +123,11 @@ class LandingEnv3D:
 
         # Update state with forward Euler
         self.state += self._get_state_dot() * self.param["dt"]
+        # print(self.state)
+
+        reward = self._get_reward()
+
+        self.reward += reward
 
         # Check whether done
         self.done = self._check_out_of_bounds() | self._check_out_of_time()
@@ -145,14 +135,46 @@ class LandingEnv3D:
         # Clamp altitude to bounds (VERY important for reward because of 1/h)
         # TODO: make this nicer?
         if self.done:
-            pos_min, pos_max = self._param["state bounds"]
+            pos_min, pos_max = self._param["state bounds"]  
             self.state[0:3] = np.clip(
                 self.state[0:3], pos_min.reshape(-1, 1), pos_max.reshape(-1, 1)
             )
             self.t = np.clip(self.t, 0.0, self._param["time bound"])
 
+            # second_calc_place_holder = self.height_reward
+
+            if self.state[2] == self._param["state bounds"][1, 2]:
+                # self.reward = self.reward + np.abs((self.max_t - self.t) * self.max_h)
+
+                while self.height_reward >= self._param["state bounds"][0, 2]:
+                    self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
+                    self.reward = self.reward + np.abs(self.param["dt"]* (self.max_h- self.height_reward))
+
+                # self.reward = self.reward + np.abs((t_adm - self.t) * self.max_h)
+            if np.abs(self.state[2] - self._param["state bounds"][0, 2])<0.01:
+                while self.height_reward >= self._param["state bounds"][0, 2]:
+                    self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
+                    # self.reward = self.reward + np.abs(self.height_reward/(self.height_reward/4) *self.height_reward *0.5)#dit is nog fout
+                    self.reward = self.reward + self.param["dt"]*self.height_reward
+
+            # self.height_reward = second_calc_place_holder
+
+            #for wx
+            # if self.state[0] == self._param["state bounds"][1, 0]:
+            #     while self.forward_reward >= self._param["state bounds"][0, 0]:
+            #         self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+            #         self.reward = self.reward + np.abs(self.param["dt"]* (self._param["state bounds"][1, 0] - self.forward_reward))
+
+            # if self.state[0] == self._param["state bounds"][0, 0]:
+            #     while self.forward_reward >= self._param["state bounds"][0, 2]:
+            #         self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+            #         self.reward = self.reward + np.abs(self.param["dt"]* (self.forward_reward - self._param["state bounds"][0, 0]))
+
+
+
+
         # Get reward
-        self.reward = self._get_reward()
+        
 
         return self._get_obs(), self.reward, self.done, {}, self.height_reward
 
@@ -166,6 +188,7 @@ class LandingEnv3D:
 
         # don't pay attention to the dot label
         p_dot = self.state[3:6] + self._get_wind()
+        # print(self.wind)
         # Velocity
         v_dot = (
             np.array([0, 0, -self.G]).reshape(-1, 1)
@@ -208,6 +231,13 @@ class LandingEnv3D:
         self.obs_gt[1] = -self.state[4, 0] / np.maximum(1e-5, self.state[2, 0])
         self.obs_gt[2] = -2 * self.state[5, 0] / np.maximum(1e-5, self.state[2, 0])
 
+        wx_dot = (self.obs_gt[0] - self.wx_ph[0]) / self.param['dt']
+        wy_dot = (self.obs_gt[1] - self.wy_ph[0]) / self.param['dt']
+        div_dot = (self.obs_gt[2] - self.div_ph[0]) / self.param['dt']
+
+        self.wx_ph[:] = [self.obs_gt[0], wx_dot]
+        self.wy_ph[:] = [self.obs_gt[1], wy_dot]
+        self.div_ph[:] = [self.obs_gt[2], div_dot]
 
         # Add bias + noise
         # TODO: can this be done vectorized?
@@ -228,24 +258,77 @@ class LandingEnv3D:
         )
 
         # Append to end of deque
-        self.obs.append(np.array([wx, wy, div]))
 
-        return self.obs[0]
+        wx_dot = (wx - self.obs[-1][0]) / self.param['dt']
+        wy_dot = (wy - self.obs[-1][1]) / self.param['dt']
+        div_dot = (div - self.obs[-1][2]) / self.param['dt']
+        
+
+        self.obs.append(np.array([wx, wy, div, wx_dot, wy_dot, div_dot]))
+
+        # return self.obs[0]
+
+        # if self.state[2] > self.h_blind:
+            # return np.zeros(6, dtype=np.float32)
+        # else:
+        return np.array(self.obs[0], dtype=np.float32)
 
     def _get_reward(self):
-        return (
-            1
-            - (
-                np.abs(self.obs_gt - self.param["obs setpoint"])
-                * self.param["obs weight"]
-            ).sum()
-        ).clip(-1.0, 1.0)
+        # return (
+        #     1
+        #     - (
+        #         np.abs(self.obs_gt - self.param["obs setpoint"])
+        #         * self.param["obs weight"]
+        #     ).sum()
+        # ).clip(-1.0, 1.0)
+
+        self.height_reward =  self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
+        self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+
+        height_reward = np.abs(self.state[2] - self.height_reward)*self.param["dt"]
+        forward_reward = np.abs(self.state[0] - self.forward_reward)*self.param["dt"]
+
+        return height_reward+forward_reward
+    
+    def reset(self, h0=5.0):
+        # Initial state
+        self.state = self.param["state 0"].copy() 
+        # starting state: x, y, z, vx, vy, vz, phi, theta, psi, thrust
+        self.wind = np.zeros((3, 1))  # wind in three directions
+        self.act = np.zeros((3, 1))  #roll pitch thrust
+
+        # Circular array for dealing with delayed observations
+        self.obs = deque([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]], maxlen=self.param["obs delay"] + 1)
+        self.obs_gt = np.zeros(3)   #true obs with noise
+
+        self.height_reward = h0
+        self.x_reward = 0.
+        self.reward = 0
+
+
+        # Counting variables
+        self.done = False
+        self.steps = 0
+        self.t = 0.0
+
+        self.div_ph = np.array([0.0, 0.0], dtype=np.float32)
+        self.wx_ph = np.array([0.0, 0.0], dtype=np.float32)
+        self.wy_ph = np.array([0.0, 0.0], dtype=np.float32)
+
+        # Fill up observations
+        for _ in range(self.param["obs delay"] + 1):
+            self._get_obs()
+
+        return self.obs[0]
 
     def _body2world(self):
         return body2world(*self.state[6:9, 0])
 
     def _world2body(self):
         return world2body(*self.state[6:9, 0])
+
+    def _clamp(self, value, minimum, maximum):
+        return max(min(value, maximum), minimum)
 
     def _check_out_of_bounds(self):
         pos_min, pos_max = self._param["state bounds"]

@@ -60,9 +60,11 @@ class objective:
 
         return x
 
-    # def spike_decoder(self, spike_array):
+    def spike_decoder(self, spike_array):
 
-        # self.thrust = spike_array[0] + spike_array[1]
+
+        self.thrust = spike_array[0] + spike_array[1]
+        self.pitch = spike_array[2] + spike_array[3]
 
 
 

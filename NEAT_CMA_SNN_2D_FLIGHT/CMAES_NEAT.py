@@ -63,7 +63,7 @@ class CMA_ES:
 
         self.function = function
 
-    def optimize_run(self, runs, div, genome):
+    def optimize_run(self, runs, div, wx, genome):
         for i in range(runs):
             print('gogogo', i)
             for k in range(int(self.lamba)):
@@ -75,7 +75,7 @@ class CMA_ES:
                 self.arx[self.arx > 1.] = 0.99999
                 self.arx[self.arx < 0.] = 0.0001
 
-                self.arfitness[k] = self.function(self.arx[:,k], div[0], genome) + self.function(self.arx[:,k], div[1], genome) + self.function(self.arx[:,k], div[2], genome) + self.function(self.arx[:,k], div[3], genome) + self.function(self.arx[:,k], div[4], genome) 
+                self.arfitness[k] = self.function(self.arx[:,k], div[0], wx[0], genome) + self.function(self.arx[:,k], div[1], wx[1], genome) + self.function(self.arx[:,k], div[2], wx[2], genome) + self.function(self.arx[:,k], div[3], wx[3], genome) + self.function(self.arx[:,k], div[4], wx[4], genome) 
                 # self.function (genome nodig, place weights, objective)
                 self.counteval = self.counteval + 1 
 

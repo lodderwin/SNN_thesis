@@ -21,7 +21,7 @@ class Neuron(object):
 
         #new addition SNN for NEAT
         self.v_decay = np.random.uniform(0.1, 0.9)
-        self.threshold = np.random.uniform(0.4, 0.8)
+        self.threshold = np.random.uniform(0.5, 0.8)
 
         #new addition for determining place in 3D space 
         # calculate new position that is between two nodes

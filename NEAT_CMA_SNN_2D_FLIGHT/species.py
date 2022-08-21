@@ -3,13 +3,13 @@ import numpy as np
 from scipy.stats import expon
 from network import Network
 import config as config
-from quad_hover_var_div import QuadHover
+from env_3d_var import LandingEnv3D as Quadhover
 import matplotlib.pyplot as plt
 # import FlapPyBird.flappy as flpy
 import os
 # os.chdir(os.getcwd() + '/FlapPyBird/')
 from collections import Counter
-from snn_pytorch_mod import SNN
+from snn_pytorch_mod_double_output import SNN
 import torch
 import networkx as nx
 from network_viz import draw_net
@@ -46,6 +46,7 @@ class objective:
 
     def spike_encoder_div(self, OF_lst, prob_ref_div, prob_ref_wx):
         #current encoder
+        # print(OF_lst)
         D_plus = bool(OF_lst[-1][2]>0.) * 1.
         D_min = bool(OF_lst[-1][2]<0.) * 1.
 
@@ -67,7 +68,13 @@ class objective:
         x = torch.tensor([D_plus, D_min, D_delta_plus, D_delta_min, ref_div_node, wx_plus, wx_min, wx_delta_plus, wx_delta_min, ref_wx_node])
 
         return x
+    def spike_decoder(self, spike_array):
 
+
+        thrust = spike_array[0] + spike_array[1]
+        pitch = spike_array[2] + spike_array[3]
+
+        return (thrust, pitch)
     def objective_function_NEAT(self, model, ref_div, ref_wx):  # add prob here
 
         steps=100000
@@ -89,11 +96,12 @@ class objective:
 
 
             # print(encoded_input)
-            thrust_setpoint = mav_model(encoded_input.float()) 
-            # print(thrust_setpoint)           
-            divs, reward, done, _, _ = self.environment.step(thrust_setpoint.detach().numpy())
+            array = mav_model(encoded_input.float()) 
+            control_input = self.spike_decoder(array.detach().numpy())
+            # print('a', control_input)           
+            divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
             self.environment._get_reward()    
-            self.environment.render()
+            # self.environment.render()
             if done:
                 break
             divs_lst.append(self.environment.state[0])
@@ -151,12 +159,12 @@ class objective:
         reward_cum = 0
         for step in range(steps):
             encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
-            # print(encoded_input)
-            thrust_setpoint = mav_model(encoded_input.float()) 
-            # print(thrust_setpoint)           
-            divs, reward, done, _, _ = self.environment.step(thrust_setpoint.detach().numpy())
+            array = mav_model(encoded_input.float()) 
+            control_input = self.spike_decoder(array.detach().numpy())
+            # print('a', control_input)           
+            divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
             self.environment._get_reward()    
-            self.environment.render()
+            # self.environment.render()
             if done:
                 break
             divs_lst.append(self.environment.state[2][0])
@@ -485,9 +493,9 @@ class Species(object):
         self.high_con = 3.
         
 
-    def run_generation(self, cycle, div_training):
+    def run_generation(self, cycle, div_training, wx_training):
         if self.active: #this should always be true unless species are allowed to die
-            species_fitness = self.generate_fitness(cycle, div_training)
+            species_fitness = self.generate_fitness(cycle, div_training, wx_training)
             # I don't particularly like this +1 fix... as it will skew populations
             avg_species_fitness = float(species_fitness)/float(self.species_population+1)
             self.culling(avg_species_fitness)
@@ -522,7 +530,7 @@ class Species(object):
 
     #     return species_score
 
-    def generate_fitness(self, cycle, div_training):
+    def generate_fitness(self, cycle, div_training, wx_training):
         species_score = 0
         for genome_id, genome in self.genomes.items():
             # draw_net(genome)
@@ -533,30 +541,32 @@ class Species(object):
             self.genomes[genome_id].neuron_matrix = neuron_matrix
 
 
-            environment = QuadHover()
+            environment = Quadhover()
             objective_genome = objective(environment)
 
             
             ## CMA-ES learning 
-            cycles = 10
+            cycles = 5
             tags = list({x[0]: x[1].weight for x in genome.genes.items()}.keys())
             weights = np.asarray(list({x[0]: x[1].weight for x in genome.genes.items()}.values()))
             # for cycle in range(cycles):  
             cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
-            new_weights, best_fitness = cma_es_class.optimize_run(25, div_training, self.genomes[genome_id])
+            new_weights, best_fitness = cma_es_class.optimize_run(cycles, div_training, wx_training, self.genomes[genome_id])
             
             gene_ad = 0
             for gene in tags:
                 self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
                 gene_ad =+ 1
 
+
+
             model = place_weights(neuron_matrix, genome)
             # environment = QuadHover()
             # objective_genome = objective(environment)
                       
             reward = 0
-            for div in div_training:
-                reward += objective_genome.objective_function_NEAT(model, div)
+            for i in range(len(div_training)):
+                reward += objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
             reward = reward/float(len(div_training))
 
             

@@ -55,9 +55,10 @@ class NEAT(object):
             avg_fitness_scores = {}
             # Run the current generation for each species
             div_training = [np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5)]
+            wx_training = [np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5)]
 
             for s_id, s in self.species.items():
-                avg_fitness = s.run_generation(i, div_training)
+                avg_fitness = s.run_generation(i, div_training, wx_training)
                 if avg_fitness != None:
                     avg_fitness_scores[s_id] = avg_fitness
                     print('aaa', avg_fitness)
@@ -311,3 +312,16 @@ a.start_evolutionary_process()
 
 
 # %%
+
+
+# neuron_matrix = find_all_routes(genome)
+# neuron_matrix = clean_array(neuron_matrix)
+
+# model = place_weights(neuron_matrix, genome)
+# # environment = QuadHover()
+# # objective_genome = objective(environment)
+            
+# reward = 0
+# for i in range(len(div_training)):
+#     reward += objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
+# reward = reward/float(len(div_training))

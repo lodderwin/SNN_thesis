@@ -113,10 +113,16 @@ class non_SpikingMLP(nn.Module):
         # Loop over current (accessible with 'size') and next (accessible with 'sizes[i]') element
         # for i, size in enumerate(sizes[-1], start=1):
             # Parameters of synapses and neurons are randomly initialized
-        print(output_size)
         self.synapses.append(nn.Linear(l_1_size, output_size, bias=False))
         self.neurons.append(LIF_no_thres(output_size))
         self.states.append(None)
+
+
+        # for i, size in enumerate(sizes[:-1], start=1):
+        #     # Parameters of synapses and neurons are randomly initialized
+        #     self.synapses.append(nn.Linear(l_1_size, output_size[i], bias=False))
+        #     self.neurons.append(LIF_no_thres(output_size))
+        #     self.states.append(None)
 
     def forward(self, z):
         for i, (neuron, synapse) in enumerate(zip(self.neurons, self.synapses)):

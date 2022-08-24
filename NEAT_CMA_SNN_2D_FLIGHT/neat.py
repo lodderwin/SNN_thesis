@@ -15,7 +15,7 @@ import numpy as np
 import math
 import random
 import matplotlib.pyplot as plt
-
+import dill
 # objective function in neat Env
 #genome = network
 
@@ -35,7 +35,7 @@ class NEAT(object):
         self.initial_genome_topology = (config.INPUT_NEURONS, config.OUTPUT_NEURONS)
 
         self.species_N = 0
-        self.species = {}
+        self.species = {} 
 
         self.population_fitness_avg = 0
 
@@ -47,10 +47,10 @@ class NEAT(object):
 
 
         self.best_species = None
-    def start_evolutionary_process(self):
+    def start_evolutionary_process(self, iterations=10):
         i = 0
         # while not self.solved:
-        while i<50:
+        while i<iterations:
 
             avg_fitness_scores = {}
             # Run the current generation for each species
@@ -84,6 +84,10 @@ class NEAT(object):
         # Need to potentially set this somewhere...
             print('bbb', i)
         self.best_species = max(avg_fitness_scores, key=avg_fitness_scores.get)
+        # maximum = max(mydict, key=mydict.get)  # Just use 'min' instead of 'max' for minimum.
+        # print(maximum, mydict[maximum])
+
+        self.best_genome = self.species[self.best_species].best_genome
         # find best genome
         # best_performace = avg_fitness_scores[best_species]
 
@@ -173,9 +177,19 @@ class NEAT(object):
                 active_population += species.species_population
 
         return active_population
-
+import time
+start_time = time.time()
 a = NEAT()
-a.start_evolutionary_process()
+a.start_evolutionary_process(iterations=50)
+
+
+
+print("--- %s seconds ---" % (time.time() - start_time))
+
+
+with open('company_data.pkl', 'wb') as outp:
+    dill.dump(a, outp)
+#end with last run with 100 div's, most versatile one
 
 # matrix = find_all_routes(a.species[5].genomes[2])
 # matrix = clean_array(matrix)
@@ -186,7 +200,11 @@ a.start_evolutionary_process()
 
 #er gaat iets fout met de volgorde van neuron en genes
 #%%
-
+# with open('company_data.pkl', 'rb') as f:
+#     company1 = dill.load(f)
+# with open('company_data.pkl', 'rb') as inp:
+#     company1 = dill.load(inp)
+#     print(company1.species)  # -> banana
 
 
 
@@ -220,7 +238,7 @@ a.start_evolutionary_process()
 
 
 
-# draw_net(a.species[3].genomes[5])
+draw_net(a.species[0].genomes[3])
 
 # find_all_routes(a.species[3].genomes[2])
 # nx.draw_networkx(a.species[3].genomes[5].networkx_network)

@@ -74,11 +74,21 @@ class Neuron(object):
 
     def mutate_decay(self):
         if np.random.uniform() < config.V_DECAY_MUTATION:
-            self.v_decay = np.random.uniform(0.1, 0.9)
-        
+            # self.v_decay = np.random.uniform(0.1, 0.9)
+            self.v_decay += np.random.uniform(-0.1, 0.1)
+            if self.v_decay<0.1:
+                self.v_decay = 0.1
+            if self.v_decay>0.9:
+                self.v_decay = 0.9
     def mutate_threshold(self):
         if np.random.uniform() < config.THRESHOLD_MUTATION:
-            self.v_decay = np.random.uniform(0.4, 0.8)
+            # self.threshold = np.random.uniform(0.4, 0.8)
+            self.threshold += np.random.uniform(-0.1, 0.1)
+            if self.threshold<0.5:
+                self.threshold = 0.5
+            if self.threshold>0.9:
+                self.threshold = 0.9
+
 
 
 

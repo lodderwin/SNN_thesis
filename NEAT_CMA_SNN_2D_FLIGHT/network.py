@@ -380,6 +380,10 @@ class Network(object):
         for gene in self.genes.values():
             gene.mutate_weight()
         
+        for neuron in self.neurons.values():
+            neuron.mutate_decay()
+            neuron.mutate_threshold()
+
         # Genome Structural Mutations
         # Adding Gene
         if np.random.uniform() < config.ADD_GENE_MUTATION:

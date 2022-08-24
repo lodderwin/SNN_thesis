@@ -46,7 +46,7 @@ class objective:
 
     def spike_encoder_div(self, OF_lst, prob_ref_div, prob_ref_wx):
         #current encoder
-        # print(OF_lst)
+
         D_plus = bool(OF_lst[-1][2]>0.) * 1.
         D_min = bool(OF_lst[-1][2]<0.) * 1.
 
@@ -71,8 +71,8 @@ class objective:
     def spike_decoder(self, spike_array):
 
 
-        thrust = spike_array[0] + spike_array[1]
-        pitch = spike_array[2] + spike_array[3]
+        thrust = spike_array[0] - spike_array[1]
+        pitch = spike_array[2] - spike_array[3]
 
         return (thrust, pitch)
     def objective_function_NEAT(self, model, ref_div, ref_wx):  # add prob here
@@ -95,10 +95,9 @@ class objective:
             encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
 
 
-            # print(encoded_input)
+            
             array = mav_model(encoded_input.float()) 
             control_input = self.spike_decoder(array.detach().numpy())
-            # print('a', control_input)           
             divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
             self.environment._get_reward()    
             # self.environment.render()
@@ -109,21 +108,6 @@ class objective:
             # divs_lst.append(self.environment.thrust_tc)
         
         mav_model.reset()    
-
-        # time.sleep(0.1)
-        # plt.plot(divs_lst, c='#4287f5')
-        # plt.plot(ref_lst, c='#f29b29')
-
-        
-        # plt.ylabel('height (m)')
-        # plt.xlabel('timesteps (0.02s)')
-        # plt.title('Divergence: '+ str(ref_div))
-        # plt.plot(divs_lst)
-        
-        # figure(figsize=(8, 6), dpi=80)
-        # plt.show()
-        # plt.savefig('pres_1.png')
-        # plt.show()
         reward_cum = self.environment.reward
         print(reward_cum, self.environment.state[0], )
         return reward_cum
@@ -137,12 +121,14 @@ class objective:
         # weights = list({x[0]: x[1].weight for x in genome.genes.items()}.values())
         weights = list(x)
 
+
         gene_ad = 0
-        for gene in tags:
+        for gene in tags: 
             genome.genes[gene].weight = weights[gene_ad]
-            gene_ad =+ 1
+            gene_ad = gene_ad + 1
 
         mav_model = place_weights(genome.neuron_matrix, genome)
+        # print(mav_model.state_dict())
         # mav_model = build_model(x, self.model)
 
         # self.environment.ref_div = prob_ref*2
@@ -160,8 +146,9 @@ class objective:
         for step in range(steps):
             encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
             array = mav_model(encoded_input.float()) 
+            # print('b',array)
             control_input = self.spike_decoder(array.detach().numpy())
-            # print('a', control_input)           
+            # print('a', encoded_input, control_input)           
             divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
             self.environment._get_reward()    
             # self.environment.render()
@@ -174,13 +161,13 @@ class objective:
         mav_model.reset()    
 
         # time.sleep(0.1)
-        # plt.plot(divs_lst, c='#4287f5')
-        # plt.plot(ref_lst, c='#f29b29')
+        plt.plot(divs_lst, c='#4287f5')
+        plt.plot(ref_lst, c='#f29b29')
 
         
-        # plt.ylabel('height (m)')
-        # plt.xlabel('timesteps (0.02s)')
-        # plt.title('Divergence: '+ str(ref_div))
+        plt.ylabel('height (m)')
+        plt.xlabel('timesteps (0.02s)')
+        plt.title('Divergence: '+ str(ref_div))
         # plt.plot(divs_lst)
         
         # figure(figsize=(8, 6), dpi=80)
@@ -380,6 +367,7 @@ def place_weights(neuron_matrix, genome):
         # print(geneset)
         gene_dct[geneset[0]] = (geneset[1], geneset[2])
         gene_dct_weight[geneset[0]] = geneset[3]
+
     
     # list(mydict.keys())[list(mydict.values()).index(16)]
 
@@ -420,6 +408,7 @@ def place_weights(neuron_matrix, genome):
 
                     decay = genome.neurons[right_nodes[right_node_pos]].v_decay
                     threshold = genome.neurons[right_nodes[right_node_pos]].threshold
+                    continue
                     # print('iii', (left_nodes[left_node_pos], right_nodes[right_node_pos]) )
                 except ValueError:
                     pass
@@ -461,7 +450,6 @@ def place_weights(neuron_matrix, genome):
 
         decay_layer = []
         threshold_layer = []
-    # print(weights_dict)
     model.load_state_dict(weights_dict)
     return model
 
@@ -491,6 +479,8 @@ class Species(object):
 
         #temporarily
         self.high_con = 3.
+
+        self.best_genome = 0
         
 
     def run_generation(self, cycle, div_training, wx_training):
@@ -532,11 +522,12 @@ class Species(object):
 
     def generate_fitness(self, cycle, div_training, wx_training):
         species_score = 0
+        genome_scores = {}
         for genome_id, genome in self.genomes.items():
             # draw_net(genome)
             # try:
             print('round: ', cycle, 'species:', self.species_id, '    genome', genome_id)
-            neuron_matrix = find_all_routes(genome)
+            neuron_matrix = find_all_routes(self.genomes[genome_id])
             neuron_matrix = clean_array(neuron_matrix)
             self.genomes[genome_id].neuron_matrix = neuron_matrix
 
@@ -547,33 +538,44 @@ class Species(object):
             
             ## CMA-ES learning 
             cycles = 5
-            tags = list({x[0]: x[1].weight for x in genome.genes.items()}.keys())
-            weights = np.asarray(list({x[0]: x[1].weight for x in genome.genes.items()}.values()))
+            tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
+            weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
+
+            # print('aii', weights)
             # for cycle in range(cycles):  
             cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
             new_weights, best_fitness = cma_es_class.optimize_run(cycles, div_training, wx_training, self.genomes[genome_id])
             
+            # print('aai', new_weights)
+
             gene_ad = 0
             for gene in tags:
                 self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
-                gene_ad =+ 1
+                gene_ad = gene_ad + 1
 
 
 
-            model = place_weights(neuron_matrix, genome)
+            model = place_weights(neuron_matrix, self.genomes[genome_id])
+            print(model.state_dict())
+            # break
             # environment = QuadHover()
             # objective_genome = objective(environment)
                       
             reward = 0
             for i in range(len(div_training)):
-                reward += objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
-            reward = reward/float(len(div_training))
-
+                add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
+                reward = reward + add
+                print(add)
+            # reward = reward/float(len(div_training))
+            print('reward', reward)
             
 
 
             self.genomes[genome_id].set_fitness(-reward)
+            genome_scores[genome_id] = -reward
             species_score += -reward
+        print(genome_scores)
+        self.best_genome = max(genome_scores, key=genome_scores.get)
         return species_score
     # def generate_fitness(self):
     #     species_score = 0

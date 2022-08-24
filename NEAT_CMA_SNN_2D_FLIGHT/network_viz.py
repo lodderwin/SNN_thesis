@@ -1,6 +1,10 @@
 import graphviz
 import warnings
 import os
+import numpy as np
+import networkx as nx
+import matplotlib.pylab as plt
+
 
 # os.environ["PATH"] += os.pathsep + '/Users/erwinlodder/miniforge3/envs/snn_env/lib/python3.8/site-packages/graphviz/'
 def draw_net(genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
@@ -34,14 +38,20 @@ def draw_net(genome, view=False, filename=None, node_names=None, show_disabled=T
         'width': '0.2'}
 
     dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
-
+    # dot.attr(compound='true', rankdir="TB" )
+    # dot_top = graphviz.Digraph('subgraph')
+    # dot_top.graph_attr.update(rank='min')
     inputs = set()
     for k in [x.id for x in genome.input_neurons]:
         inputs.add(k)
         name = node_names.get(k, str(k))
-        input_attrs = {'style': 'filled', 'shape': 'box', 'fillcolor': node_colors.get(k, 'lightgray')}
+        input_attrs = {'style' : 'filled', 'shape': 'box', 'fillcolor': node_colors.get(k, 'lightgray')}
         dot.node(name, _attributes=input_attrs)
 
+    # dot.subgraph(dot_top)
+
+    # dot_bottom = graphviz.Digraph('subgraph')
+    # dot_bottom.graph_attr.update(rank='max')
     outputs = set()
     for k in [x.id for x in genome.output_neurons]:
         outputs.add(k)
@@ -50,6 +60,10 @@ def draw_net(genome, view=False, filename=None, node_names=None, show_disabled=T
 
         dot.node(name, _attributes=node_attrs)
 
+    # dot.subgraph(dot_bottom)
+
+    # dot_ middle = graphviz.Digraph('subgraph')
+    # dot_middle.graph_attr.update(rank='same')
     # used_nodes = set(genome.nodes.keys())
     used_nodes = list(genome.neurons.keys())
     for n in used_nodes:
@@ -59,6 +73,7 @@ def draw_net(genome, view=False, filename=None, node_names=None, show_disabled=T
         attrs = {'style': 'filled',
                  'fillcolor': node_colors.get(n, 'white')}
         dot.node(str(n), _attributes=attrs)
+    # dot.subgraph(dot_middle)
 
     # for cg in genome.connections.values():
     for cg in list(genome.genes.values()):    # for x in list(a.species[1].genomes[0].genes.values())
@@ -76,3 +91,23 @@ def draw_net(genome, view=False, filename=None, node_names=None, show_disabled=T
     dot.render(filename, view=view)
     # dot.view()
     return dot
+
+
+def draw_networkx_net(genome):
+
+    locations_input_neurons = np.linspace(0., 1., int(genome.num_input_neurons))
+    locations_output_neurons = np.linspace(0., 1., int(genome.num_output_neurons))
+    fixed_positions = {}
+    for neuron_num in [x.id for x in genome.input_neurons]:
+        fixed_positions[neuron_num] = (0, locations_input_neurons[neuron_num-1]) #dict with two of the positions set
+    for neuron_num in range(len([x.id for x in genome.output_neurons])):
+        fixed_positions[[x.id for x in genome.output_neurons][neuron_num]] = (1, locations_output_neurons[neuron_num])
+    
+    
+    fixed_nodes = fixed_positions.keys()
+    pos = nx.spring_layout(genome.networkx_network,pos=fixed_positions, fixed = fixed_nodes)
+    
+    nx.draw_networkx(genome.networkx_network,pos)
+    # axis = plt.gca()
+    # axis.set_xlim(0,1)
+    # plt.show()

@@ -82,8 +82,11 @@ class CMA_ES:
             # Expressing MOO objectives reward easy when considering that the 3D rates have to be a certain level--> more stable evolution
 
             ##### Potential changes for MOO or 1+ lambda CMA ES
-            self.arindex = -np.argsort(-self.arfitness) #high to low
-            self.arfitness = -np.sort(-self.arfitness)
+            # self.arindex = -np.argsort(-self.arfitness) #high to low
+            # self.arfitness = -np.sort(-self.arfitness)
+
+            self.arindex = np.argsort(self.arfitness) #low to high
+            self.arfitness = np.sort(self.arfitness)
 
             # self.arfitness, self.arindex = self.arfitness[::-1], self.arindex[::-1]
 
@@ -114,7 +117,7 @@ class CMA_ES:
                 self.sigma = self.sigma * np.exp(0.2+self.cs/self.damps)
                 print('gp')
             
-            print(self.counteval, self.arfitness[0]/5., 'worst :', self.arfitness[-1])
+            print(self.counteval, self.arfitness[0], 'worst :', self.arfitness[-1])
             self.array_plot.append([self.arx[0,self.arindex[0]], self.arx[1,self.arindex[0]]])
 
         #write weights to pickle

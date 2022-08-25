@@ -99,8 +99,6 @@ class objective:
             array = mav_model(encoded_input.float()) 
             control_input = self.spike_decoder(array.detach().numpy())
             divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
-            self.environment._get_reward()    
-            # self.environment.render()
             if done:
                 break
             divs_lst.append(self.environment.state[0])
@@ -150,8 +148,7 @@ class objective:
             control_input = self.spike_decoder(array.detach().numpy())
             # print('a', encoded_input, control_input)           
             divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
-            self.environment._get_reward()    
-            # self.environment.render()
+
             if done:
                 break
             divs_lst.append(self.environment.state[2][0])
@@ -397,8 +394,8 @@ def place_weights(neuron_matrix, genome):
         for right_node_pos in range(len(right_nodes)):
             for left_node_pos in range(len(left_nodes)):
                 # print(right_nodes[right_node_pos], left_nodes[left_node_pos])
-                decay = 0.1
-                threshold = 1.0
+                # decay = 0.1
+                # threshold = 1.0
                 try:
                     key = (left_nodes[left_node_pos], right_nodes[right_node_pos])
                     innovation_number = list(gene_dct.keys())[list(gene_dct.values()).index(key)]
@@ -408,11 +405,10 @@ def place_weights(neuron_matrix, genome):
 
                     decay = genome.neurons[right_nodes[right_node_pos]].v_decay
                     threshold = genome.neurons[right_nodes[right_node_pos]].threshold
-                    continue
+                    # continue  # added this later, is this correct?
                     # print('iii', (left_nodes[left_node_pos], right_nodes[right_node_pos]) )
                 except ValueError:
                     pass
-
 
                 if str(right_nodes[right_node_pos])==str(left_nodes[left_node_pos]):
                     fill_array[right_node_pos, left_node_pos] = 1.
@@ -427,8 +423,8 @@ def place_weights(neuron_matrix, genome):
                     #non specifieke door paas, hoge decay, hoge threshold
                     # decay_layer.append(0.1)
                     # threshold_layer.append(1.0)
-                    decay = 0.01
-                    threshold = 1.0
+                    # decay = 0.01
+                    # threshold = 1.0
 
             decay_layer.append(decay)
             threshold_layer.append(threshold)
@@ -537,7 +533,7 @@ class Species(object):
 
             
             ## CMA-ES learning 
-            cycles = 5
+            cycles = 7
             tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
             weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
 

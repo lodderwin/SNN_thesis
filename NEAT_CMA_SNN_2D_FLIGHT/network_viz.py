@@ -89,6 +89,7 @@ def draw_net(genome, view=False, filename=None, node_names=None, show_disabled=T
         dot.edge(a, b, _attributes={'style': style, 'color': color, 'penwidth': width})
 
     dot.render(filename, view=view)
+    dot.format = 'png'
     # dot.view()
     return dot
 

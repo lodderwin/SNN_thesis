@@ -179,15 +179,19 @@ class NEAT(object):
         return active_population
 import time
 start_time = time.time()
+
+#either of the two
 a = NEAT()
-a.start_evolutionary_process(iterations=50)
+# with open('demonstration.pkl', 'rb') as f:
+#     a = dill.load(f)
+a.start_evolutionary_process(iterations=10)
 
 
 
 print("--- %s seconds ---" % (time.time() - start_time))
 
 
-with open('company_data.pkl', 'wb') as outp:
+with open('demonstration.pkl', 'wb') as outp:
     dill.dump(a, outp)
 #end with last run with 100 div's, most versatile one
 

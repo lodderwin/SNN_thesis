@@ -113,7 +113,8 @@ class NeuralNetwork():
 
         pyplot.axis('scaled')
         pyplot.axis('off')
-        pyplot.title( 'Neural Network architecture', fontsize=15)
+        pyplot.title( 'Sparse SNN in MLP form', fontsize=15)
+        # pyplot.savefig('networkMLP.png')
         pyplot.show()
 
 class DrawNN():

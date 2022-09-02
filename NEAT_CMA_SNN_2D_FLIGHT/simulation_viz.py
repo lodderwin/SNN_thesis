@@ -50,7 +50,7 @@ class objective:
 
         return (thrust, pitch)
 
-    def objective_function_NEAT(self, model, ref_div, ref_wx):  # add prob here
+    def objective_function_single(self, model, ref_div, ref_wx):  # add prob here
 
         steps=100000
         
@@ -62,51 +62,177 @@ class objective:
         prob_ref_wx = self.environment.ref_wx/2.
 
         self.environment.reset()
-        divs_lst = []
-        ref_lst = []
-
+        ref_vertical = []
+        ref_horizontal = []
+        act_vertical = []
+        act_horizontal = []
+        ref_horizontal_uncoupled = []
         reward_cum = 0
         for step in range(steps):
             encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
 
-
-            
             array = mav_model(encoded_input.float()) 
             control_input = self.spike_decoder(array.detach().numpy())
-            print(control_input)
-            # divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
-            divs, reward, done, _, _ = self.environment.step(np.asarray([0., 0., 0.]))
+            print(control_input) #control_input[1]
+            divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
+            # divs, reward, done, _, _ = self.environment.step(np.asarray([0., 0., 0.]))
             # self.environment._get_reward()    
             # self.environment.render()
             if done:
                 break
-            divs_lst.append(self.environment.forward_reward)
-            ref_lst.append(self.environment.height_reward)
+            ref_horizontal.append(self.environment.forward_reward)
+            ref_vertical.append(self.environment.height_reward)
+            act_horizontal.append(self.environment.state[0][0])
+            act_vertical.append(self.environment.state[2][0])
+            ref_horizontal_uncoupled.append(self.environment.forward_reward_adm)
             # divs_lst.append(self.environment.thrust_tc)
-        plt.plot(divs_lst[:200], c='#4287f5')
-        plt.plot(ref_lst[:200], c='#f29b29')
+        
+        plt.plot(ref_horizontal,ref_vertical, c='#93a6f5')
+        plt.plot(act_horizontal,act_vertical,  c='#2b54ff')
+        plt.plot(ref_horizontal_uncoupled,ref_vertical, c='#e89725')
 
         
         plt.ylabel('height (m)')
-        plt.xlabel('timesteps (0.02s)')
+        plt.xlabel('distance (m)')
         plt.title('Divergence: '+ str(ref_div))
+        # plt.savefig('25-08meeting.png')
         mav_model.reset()    
         reward_cum = self.environment.reward
-        print(reward_cum, self.environment.state[0], )
+        print(reward_cum, self.environment.state[0] )
         return reward_cum
 
-with open('demonstration.pkl', 'rb') as f:
+
+    def objective_function_multiple(self, model, ref_div, ref_wx, runs):  # add prob here
+        all_runs_vertical = []
+        all_runs_horizontal = []
+
+        nearest_traj = 100.
+        nearest_traj_int = 0
+        furthest_traj = 0.
+        furthest_traj_int = 0
+
+        for run in range(runs):
+
+            steps=100000
+            
+            mav_model = model
+            # self.environment.ref_div = prob_ref*2
+            self.environment.ref_div = ref_div
+            self.environment.ref_wx = ref_wx
+            prob_ref_div = self.environment.ref_div/2.
+            prob_ref_wx = self.environment.ref_wx/2.
+
+            self.environment.reset()
+            ref_vertical = []
+            ref_horizontal = []
+            act_vertical = []
+            act_horizontal = []
+            ref_horizontal_uncoupled = []
+            reward_cum = 0
+            for step in range(steps):
+                encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
+
+                array = mav_model(encoded_input.float()) 
+                control_input = self.spike_decoder(array.detach().numpy())
+                divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
+                # divs, reward, done, _, _ = self.environment.step(np.asarray([0., 0., 0.]))
+                # self.environment._get_reward()    
+                # self.environment.render()
+                if done:
+                    break
+                ref_horizontal.append(self.environment.forward_reward)
+                ref_vertical.append(self.environment.height_reward)
+                act_horizontal.append(self.environment.state[0][0])
+                act_vertical.append(self.environment.state[2][0])
+                # ref_horizontal_uncoupled.append(self.environment.forward_reward_adm)
+                
+                # plt.plot(ref_horizontal_uncoupled,ref_vertical, c='#e89725')
+                # divs_lst.append(self.environment.thrust_tc)
+            if act_horizontal[-1]<nearest_traj:
+                nearest_traj = act_horizontal[-1]
+                nearest_traj_int = len(all_runs_vertical)
+
+            if act_horizontal[-1]>furthest_traj:
+                furthest_traj = act_horizontal[-1]
+                furthest_traj_int = len(all_runs_vertical)
+                
+            all_runs_vertical.append(act_vertical)
+            all_runs_horizontal.append(act_horizontal)
+            plt.plot(act_horizontal,act_vertical,  c='#93a6f5', alpha=0.1)
+            # print(act_horizontal)
+
+        pad_vertical = len(max(all_runs_vertical, key=len))
+        all_runs_matrix_vertical = np.array([i + [0]*(pad_vertical-len(i)) for i in all_runs_vertical])
+        # print(all_runs_matrix_vertical)
+        min_vert = np.amin(all_runs_matrix_vertical, axis=0)
+        min_vert = min_vert[min_vert!=0]
+        max_vert = np.amax(all_runs_matrix_vertical, axis=0)
+        max_vert = max_vert[max_vert!=0]
+        
+        pad_horizontal = len(max(all_runs_horizontal, key=len))
+        all_runs_matrix_horizontal = np.array([i + [0]*(pad_horizontal-len(i)) for i in all_runs_horizontal])
+        min_hor = np.amin(all_runs_matrix_horizontal, axis=0)
+        min_hor = min_hor[min_hor!=0]
+        max_hor = np.amax(all_runs_matrix_horizontal, axis=0)
+        max_hor = max_hor[max_hor!=0]
+
+        # print(min_vert)
+        # min_length_plots_min = min([len(min_vert),len(min_hor)])
+        # plt.plot(min_hor[:min_length_plots_min],min_vert[:min_length_plots_min], c='#2b54ff')
+        # min_length_plots_max = min([len(max_vert),len(max_hor)])
+        # plt.plot(max_hor[:min_length_plots_max],max_vert[:min_length_plots_max],  c='#2b54ff')
+        # print(min_length_plots_max, min_length_plots_min)
+
+
+        plt.plot(all_runs_horizontal[nearest_traj_int],all_runs_vertical[nearest_traj_int], c='#2b54ff')
+        plt.plot(all_runs_horizontal[furthest_traj_int],all_runs_vertical[furthest_traj_int],  c='#2b54ff')
+
+        # plt.plot(ref_horizontal_uncoupled,ref_vertical, c='#e89725')
+        plt.plot(ref_horizontal,ref_vertical, c='#eb9e34')
+        print(ref_horizontal, ref_vertical)
+        plt.ylabel('height (m)')
+        plt.xlabel('distance (m)')
+        plt.title('Divergence: '+ str(ref_div))
+        # plt.savefig('25-08meeting.png')
+        mav_model.reset()    
+        reward_cum = self.environment.reward
+        return reward_cum
+
+with open('paper.pkl', 'rb') as f:
     neat_class = dill.load(f)
 
-neuron_matrix = find_all_routes(neat_class.species[neat_class.best_species].genomes[neat_class.best_genome])
+# neat_class.species[neat_class.best_species].genomes[neat_class.best_genome]
+neuron_matrix = find_all_routes(neat_class.best_genome)
 neuron_matrix = clean_array(neuron_matrix)
-model = place_weights(neuron_matrix, neat_class.species[neat_class.best_species].genomes[neat_class.best_genome])
-network_viz = draw_net(neat_class.species[neat_class.best_species].genomes[neat_class.best_genome])
+model = place_weights(neuron_matrix, neat_class.best_genome)
+network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
 objective = objective(model, environment=environment)
-objective.objective_function_NEAT(model, 1., 1.)
-# network_viz.view()
+objective.objective_function_multiple(model, 1., 1., 50)
+# objective.objective_function_single(model, 1., 1.)
+print(neat_class.best_genome.fitness)
 
+# # network_viz.view()
+# print(neat_class.species[neat_class.best_species].genomes[neat_class.best_genome].fitness, neat_class.best_genome)
+# print(model.state_dict())
+
+
+# draw_nn = DrawNN(model)
+# draw_nn.draw()
+
+# species = 0
+# genome = 0
+
+
+# neuron_matrix = find_all_routes(neat_class.species[species].genomes[genome])
+# neuron_matrix = clean_array(neuron_matrix)
+# model = place_weights(neuron_matrix, neat_class.species[species].genomes[genome])
+# network_viz = draw_net(neat_class.species[species].genomes[genome])
+# environment = Quadhover()
+# objective = objective(model, environment=environment)
+# objective.objective_function_multiple(model, 1., 1., 50)
+# network_viz.view()
+# print(neat_class.species[species].genomes[genome].fitness, neat_class.best_genome)
 
 # draw_nn = DrawNN(model)
 # draw_nn.draw()

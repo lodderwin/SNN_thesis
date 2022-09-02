@@ -70,6 +70,11 @@ class NEAT(object):
             
             if config.DYNAMIC_POPULATION:
                 self.assign_species_populations_for_next_generation(avg_fitness_scores)
+
+            self.best_species = max(avg_fitness_scores, key=avg_fitness_scores.get)
+            self.best_genome = self.species[self.best_species].genomes[self.species[self.best_species].best_genome]
+
+
             # Evolve (create the next generation) for each species
             for s_id, s in self.species.items():
                 s.evolve()   
@@ -83,11 +88,11 @@ class NEAT(object):
 
         # Need to potentially set this somewhere...
             print('bbb', i)
-        self.best_species = max(avg_fitness_scores, key=avg_fitness_scores.get)
+        
         # maximum = max(mydict, key=mydict.get)  # Just use 'min' instead of 'max' for minimum.
         # print(maximum, mydict[maximum])
 
-        self.best_genome = self.species[self.best_species].best_genome
+        
         # find best genome
         # best_performace = avg_fitness_scores[best_species]
 
@@ -178,21 +183,28 @@ class NEAT(object):
 
         return active_population
 import time
-start_time = time.time()
 
-#either of the two
-a = NEAT()
-# with open('demonstration.pkl', 'rb') as f:
-#     a = dill.load(f)
-a.start_evolutionary_process(iterations=10)
+#either of the two 
+# a = NEAT()
+# a.start_evolutionary_process(iterations=1)
+# with open('paper.pkl', 'wb') as outp:
+#     dill.dump(a, outp)
+
+with open('paper.pkl', 'rb') as f:
+    a = dill.load(f)
+for i in range(200):
+    start_time = time.time()
+    a.start_evolutionary_process(iterations=1)
+    with open('paper.pkl', 'wb') as outp:
+        dill.dump(a, outp)
+    print("--- %s seconds ---" % (time.time() - start_time))
 
 
 
-print("--- %s seconds ---" % (time.time() - start_time))
 
 
-with open('demonstration.pkl', 'wb') as outp:
-    dill.dump(a, outp)
+
+
 #end with last run with 100 div's, most versatile one
 
 # matrix = find_all_routes(a.species[5].genomes[2])
@@ -242,7 +254,7 @@ with open('demonstration.pkl', 'wb') as outp:
 
 
 
-draw_net(a.species[0].genomes[3])
+# draw_net(a.species[0].genomes[3])
 
 # find_all_routes(a.species[3].genomes[2])
 # nx.draw_networkx(a.species[3].genomes[5].networkx_network)

@@ -107,7 +107,7 @@ class objective:
         
         mav_model.reset()    
         reward_cum = self.environment.reward
-        print(reward_cum, self.environment.state[0], )
+        # print(reward_cum, self.environment.state[0], )
         return reward_cum
     
     def objective_function_CMAES(self, x, ref_div, ref_wx, genome):  # add prob here
@@ -158,13 +158,13 @@ class objective:
         mav_model.reset()    
 
         # time.sleep(0.1)
-        plt.plot(divs_lst, c='#4287f5')
-        plt.plot(ref_lst, c='#f29b29')
+        # plt.plot(divs_lst, c='#4287f5')
+        # plt.plot(ref_lst, c='#f29b29')
 
         
-        plt.ylabel('height (m)')
-        plt.xlabel('timesteps (0.02s)')
-        plt.title('Divergence: '+ str(ref_div))
+        # plt.ylabel('height (m)')
+        # plt.xlabel('timesteps (0.02s)')
+        # plt.title('Divergence: '+ str(ref_div))
         # plt.plot(divs_lst)
         
         # figure(figsize=(8, 6), dpi=80)
@@ -172,7 +172,7 @@ class objective:
         # plt.savefig('pres_1.png')
         # plt.show()
         reward_cum = self.environment.reward
-        print(reward_cum, self.environment.state[2])
+        # print(reward_cum, self.environment.state[2])
         return reward_cum
 
 def find_all_routes(genome):
@@ -483,7 +483,7 @@ class Species(object):
         if self.active: #this should always be true unless species are allowed to die
             species_fitness = self.generate_fitness(cycle, div_training, wx_training)
             # I don't particularly like this +1 fix... as it will skew populations
-            avg_species_fitness = float(species_fitness)/float(self.species_population+1)
+            avg_species_fitness = float(species_fitness)/float(self.species_population)
             self.culling(avg_species_fitness)
             return avg_species_fitness if self.active else None
         else:
@@ -533,21 +533,21 @@ class Species(object):
 
             
             ## CMA-ES learning 
-            cycles = 7
-            tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
-            weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
+            # cycles = 3
+            # tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
+            # weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
 
-            # print('aii', weights)
-            # for cycle in range(cycles):  
-            cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
-            new_weights, best_fitness = cma_es_class.optimize_run(cycles, div_training, wx_training, self.genomes[genome_id])
+            # # print('aii', weights)
+            # # for cycle in range(cycles):  
+            # cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
+            # new_weights, best_fitness = cma_es_class.optimize_run(cycles, div_training, wx_training, self.genomes[genome_id])
             
-            # print('aai', new_weights)
+            # # print('aai', new_weights)
 
-            gene_ad = 0
-            for gene in tags:
-                self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
-                gene_ad = gene_ad + 1
+            # gene_ad = 0
+            # for gene in tags:
+            #     self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
+            #     gene_ad = gene_ad + 1
 
 
 
@@ -561,7 +561,7 @@ class Species(object):
             for i in range(len(div_training)):
                 add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
                 reward = reward + add
-                print(add)
+                print(div_training[i], wx_training[i], add)
             # reward = reward/float(len(div_training))
             print('reward', reward)
             

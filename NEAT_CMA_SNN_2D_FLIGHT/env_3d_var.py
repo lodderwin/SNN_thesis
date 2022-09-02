@@ -1,4 +1,5 @@
 from collections import deque
+import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -35,7 +36,8 @@ class LandingEnv3D:
         gains=[6, 6, 3.0],
         dt=0.02,
         seed=None,
-        act_high=[1 * np.pi] * 2 + [0.4 * G],  #why?
+        # act_high=[1 * np.pi] * 2 + [0.4 * G],  #why?
+        act_high=[1 * 0.785] * 2 + [0.4 * G],  #why?
         state_bounds=[[-50, -50, 0.1], [50, 50, 100]],
         time_bound=30,
     ):
@@ -69,6 +71,7 @@ class LandingEnv3D:
 
         # Reset to get initial observation and allocate arrays
         self.reset()
+        self.max_h = state_bounds[1][2]
 
         # changes
         self.ref_div = ref_div
@@ -78,6 +81,7 @@ class LandingEnv3D:
         self.reward = 0
         self.height_reward = state_0[2]
         self.forward_reward = 0.
+        self.forward_reward_adm = 0.
 
         self.h_blind = h_blind
 
@@ -127,10 +131,10 @@ class LandingEnv3D:
 
         reward = self._get_reward()
 
-        self.reward += reward
+        self.reward = self.reward + reward
 
         # Check whether done
-        self.done = self._check_out_of_bounds() | self._check_out_of_time()
+        self.done = self._check_out_of_bounds() | self._check_out_of_time() | self._check_projected_landing()
 
         # Clamp altitude to bounds (VERY important for reward because of 1/h)
         # TODO: make this nicer?
@@ -148,15 +152,18 @@ class LandingEnv3D:
 
                 while self.height_reward >= self._param["state bounds"][0, 2]:
                     self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
-                    
-                    self.reward = self.reward + np.abs(self.param["dt"]* (self.max_h- self.height_reward)) + np.abs(self.state[3][0] - self.ref_wx*self.state[2][0]/2)*self.param["dt"]
+                    # self.forward_reward = self.forward_reward + (self.ref_wx*self.state[2][0]/2)*self.param["dt"]
+                    self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+                    self.reward = self.reward + np.abs(self.param["dt"]* (self.max_h- self.height_reward)) + np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
 
                 # self.reward = self.reward + np.abs((t_adm - self.t) * self.max_h)
             if np.abs(self.state[2][0] - self._param["state bounds"][0, 2])<0.01:
                 while self.height_reward >= self._param["state bounds"][0, 2]:
                     self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
                     # self.reward = self.reward + np.abs(self.height_reward/(self.height_reward/4) *self.height_reward *0.5)#dit is nog fout
-                    self.reward = self.reward + 2*(self.param["dt"]*self.height_reward + np.abs(self.state[3][0] - self.ref_wx*self.state[2][0]/2)*self.param["dt"])
+                    self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+                    
+                    self.reward = self.reward + np.abs(self.param["dt"]*self.height_reward) + np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
 
             # self.height_reward = second_calc_place_holder
 
@@ -177,7 +184,7 @@ class LandingEnv3D:
         # Get reward
         
 
-        return self._get_obs(), self.reward, self.done, {}, self.height_reward
+        return self._get_obs(), reward, self.done, {}, self.height_reward
 
     def _get_state_dot(self):
         """
@@ -204,7 +211,6 @@ class LandingEnv3D:
         act[3, 0] += self.G  # offset G
         gains = np.insert(self.param["gains"], 2, 0, axis=0)  # and 0 gain
         act_dot = gains * (act - self.state[6:10])
-
         return np.vstack((p_dot, v_dot, act_dot))
 
     def _get_wind(self):
@@ -287,13 +293,12 @@ class LandingEnv3D:
         else:
             self.height_reward =  self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
             # self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
-            print(self.state[2][0])
-            self.forward_reward = self.forward_reward + (self.ref_wx*self.state[2][0]/2)*self.param["dt"]
+            self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+            self.forward_reward_adm = self.forward_reward_adm + (self.ref_wx*self.height_reward/2)*self.param["dt"]
 
         height_reward = np.abs(self.state[2][0] - self.height_reward)*self.param["dt"]
         forward_reward = np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
-
-        return height_reward+forward_reward
+        return  forward_reward + height_reward
     
     def reset(self, h0=5.0):
         # Initial state
@@ -307,6 +312,7 @@ class LandingEnv3D:
         self.obs_gt = np.zeros(3)   #true obs with noise
 
         self.height_reward = h0
+        self.forward_reward = 0.0
         self.x_reward = 0.
         self.reward = 0
 
@@ -345,6 +351,63 @@ class LandingEnv3D:
     def _check_out_of_time(self):
         return (self.steps + 1) * self.param["dt"] >= self._param["time bound"]
 
+    def _check_projected_landing(self):
+        return self.height_reward<0.01
+
+    def checkfunction(self):
+
+        plt_traj_ref = []
+        plt_traj = []
+
+
+        while not self.done:
+
+            self.done = self._check_out_of_bounds() | self._check_out_of_time() | self._check_projected_landing()
+            self.t += self.param["dt"]
+
+
+            self.state[2][0] += -0.01
+            self.state[3][0] += 0.
+            self.state[0][0] += self.state[3][0]*self.param["dt"]
+
+            reward = self._get_reward()
+            self.reward = self.reward + reward
+            print('a', self.reward)
+            plt_traj_ref.append(self.height_reward)
+            plt_traj.append(self.state[2][0])
+            
+
+        if self.done:
+                pos_min, pos_max = self._param["state bounds"]  
+                self.state[0:3] = np.clip(
+                    self.state[0:3], pos_min.reshape(-1, 1), pos_max.reshape(-1, 1)
+                )
+                self.t = np.clip(self.t, 0.0, self._param["time bound"])
+
+                second_calc_place_holder = self.height_reward
+                self.forward_reward = (self.ref_wx*self.state[2][0]/2)*self.param["dt"]
+                if self.state[2][0] == self._param["state bounds"][1, 2]:
+                    # self.reward = self.reward + np.abs((self.max_t - self.t) * self.max_h)
+
+                    while self.height_reward >= self._param["state bounds"][0, 2]:
+                        self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
+                        self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+                        self.reward = self.reward + np.abs(self.param["dt"]* (self.max_h- self.height_reward)) + np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
+
+                    # self.reward = self.reward + np.abs((t_adm - self.t) * self.max_h)
+                if np.abs(self.state[2][0] - self._param["state bounds"][0, 2])<0.01:
+                    while self.height_reward >= self._param["state bounds"][0, 2]:
+                        self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
+                        self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+                        # self.reward = self.reward + np.abs(self.height_reward/(self.height_reward/4) *self.height_reward *0.5)#dit is nog fout
+                        print(self.reward, np.abs(self.param["dt"]*self.height_reward)) 
+                        plt_traj_ref.append(self.height_reward)
+                        self.reward = self.reward  + np.abs(self.param["dt"]*self.height_reward) + np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
+
+        plt.plot(plt_traj_ref)
+        plt.plot(plt_traj)
+        plt.show()
+        print(self.reward)
 
 def body2world(phi, theta, psi):
     """
@@ -374,3 +437,14 @@ def world2body(phi, theta, psi):
     Rotation matrix from world frame to body frame.
     """
     return body2world(phi, theta, psi).T
+
+
+
+
+    # check actual reward function by simulating straight line trajectories
+
+
+# environment = LandingEnv3D(ref_div=1., ref_wx=1.)
+# environment.reset()
+# environment.checkfunction()
+

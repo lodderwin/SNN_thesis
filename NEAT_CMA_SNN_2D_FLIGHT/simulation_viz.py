@@ -101,7 +101,6 @@ class objective:
         print(reward_cum, self.environment.state[0] )
         return reward_cum
 
-
     def objective_function_multiple(self, model, ref_div, ref_wx, runs):  # add prob here
         all_runs_vertical = []
         all_runs_horizontal = []
@@ -110,7 +109,8 @@ class objective:
         nearest_traj_int = 0
         furthest_traj = 0.
         furthest_traj_int = 0
-
+        fig = plt.figure(figsize=(5,5))
+        ax = fig.gca(projection='3d')
         for run in range(runs):
 
             steps=100000
@@ -158,7 +158,8 @@ class objective:
                 
             all_runs_vertical.append(act_vertical)
             all_runs_horizontal.append(act_horizontal)
-            plt.plot(act_horizontal,act_vertical,  c='#93a6f5', alpha=0.1)
+
+            ax.plot(np.arange(len(act_horizontal))*0.02,act_horizontal,act_vertical, c='#93a6f5', alpha=0.1)
             # print(act_horizontal)
 
         pad_vertical = len(max(all_runs_vertical, key=len))
@@ -184,16 +185,21 @@ class objective:
         # print(min_length_plots_max, min_length_plots_min)
 
 
-        plt.plot(all_runs_horizontal[nearest_traj_int],all_runs_vertical[nearest_traj_int], c='#2b54ff')
-        plt.plot(all_runs_horizontal[furthest_traj_int],all_runs_vertical[furthest_traj_int],  c='#2b54ff')
+        # plt.plot(all_runs_horizontal[nearest_traj_int],all_runs_vertical[nearest_traj_int], c='#2b54ff')
+        ax.plot(np.arange(len(all_runs_horizontal[nearest_traj_int]))*0.02,all_runs_horizontal[nearest_traj_int],all_runs_vertical[nearest_traj_int], c='#2b54ff', alpha=0.9)
+        # plt.plot(all_runs_horizontal[furthest_traj_int],all_runs_vertical[furthest_traj_int],  c='#2b54ff')
+        ax.plot(np.arange(len(all_runs_horizontal[furthest_traj_int]))*0.02,all_runs_horizontal[furthest_traj_int],all_runs_vertical[furthest_traj_int],  c='#2b54ff', alpha=0.9)
 
         # plt.plot(ref_horizontal_uncoupled,ref_vertical, c='#e89725')
-        plt.plot(ref_horizontal,ref_vertical, c='#eb9e34')
-        print(ref_horizontal, ref_vertical)
-        plt.ylabel('height (m)')
-        plt.xlabel('distance (m)')
+        # plt.plot(ref_horizontal,ref_vertical, c='#eb9e34')
+        ax.plot(np.arange(len(ref_horizontal))*0.02,ref_horizontal,ref_vertical,  c='#ffa72b', alpha=0.9)
+        print(ref_horizontal[-1], ref_vertical[-1])
+        ax.set_zlabel('height (m)')
+        ax.set_xlabel('time (s)')
+        ax.set_ylabel('distance (m)')
         plt.title('Divergence: '+ str(ref_div))
-        # plt.savefig('25-08meeting.png')
+        ax.view_init(15, 90)
+        plt.savefig('02-09meeting.png')
         mav_model.reset()    
         reward_cum = self.environment.reward
         return reward_cum
@@ -210,11 +216,13 @@ environment = Quadhover()
 objective = objective(model, environment=environment)
 objective.objective_function_multiple(model, 1., 1., 50)
 # objective.objective_function_single(model, 1., 1.)
-print(neat_class.best_genome.fitness)
-
-# # network_viz.view()
-# print(neat_class.species[neat_class.best_species].genomes[neat_class.best_genome].fitness, neat_class.best_genome)
 # print(model.state_dict())
+print(neat_class.best_genome.fitness, neat_class.best_genome)
+
+
+network_viz.view()
+# print(neat_class.species[neat_class.best_species].genomes[neat_class.best_genome].fitness, neat_class.best_genome)
+
 
 
 # draw_nn = DrawNN(model)

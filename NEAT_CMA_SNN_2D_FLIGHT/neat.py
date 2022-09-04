@@ -67,7 +67,7 @@ class NEAT(object):
                 print("\n\nAll species have gone extinct!\n\n")
                 exit()
 
-            
+            break
             if config.DYNAMIC_POPULATION:
                 self.assign_species_populations_for_next_generation(avg_fitness_scores)
 
@@ -185,19 +185,19 @@ class NEAT(object):
 import time
 
 #either of the two 
-# a = NEAT()
-# a.start_evolutionary_process(iterations=1)
+a = NEAT()
+a.start_evolutionary_process(iterations=1)
 # with open('paper.pkl', 'wb') as outp:
 #     dill.dump(a, outp)
 
-with open('paper.pkl', 'rb') as f:
-    a = dill.load(f)
-for i in range(200):
-    start_time = time.time()
-    a.start_evolutionary_process(iterations=1)
-    with open('paper.pkl', 'wb') as outp:
-        dill.dump(a, outp)
-    print("--- %s seconds ---" % (time.time() - start_time))
+# with open('paper.pkl', 'rb') as f:
+#     a = dill.load(f)
+# for i in range(200):
+#     start_time = time.time()
+#     a.start_evolutionary_process(iterations=1)
+#     with open('paper.pkl', 'wb') as outp:
+#         dill.dump(a, outp)
+#     print("--- %s seconds ---" % (time.time() - start_time))
 
 
 

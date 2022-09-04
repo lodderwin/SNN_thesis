@@ -552,7 +552,6 @@ class Species(object):
 
 
             model = place_weights(neuron_matrix, self.genomes[genome_id])
-            print(model.state_dict())
             # break
             # environment = QuadHover()
             # objective_genome = objective(environment)
@@ -561,7 +560,7 @@ class Species(object):
             for i in range(len(div_training)):
                 add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
                 reward = reward + add
-                print(div_training[i], wx_training[i], add)
+                # print(div_training[i], wx_training[i], add)
             # reward = reward/float(len(div_training))
             print('reward', reward)
             
@@ -570,7 +569,7 @@ class Species(object):
             self.genomes[genome_id].set_fitness(-reward)
             genome_scores[genome_id] = -reward
             species_score += -reward
-        print(genome_scores)
+        # print(genome_scores)
         self.best_genome = max(genome_scores, key=genome_scores.get)
         return species_score
     # def generate_fitness(self):

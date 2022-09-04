@@ -46,6 +46,17 @@ class Gene(object):
         # self.weight = np.random.uniform(-2, 2)
         self.weight = np.random.uniform(0.1, 0.9)
 
+    # def mutate_disable(self):
+    #     # genes = [[x.input_neuron.id, x.output_neuron.id] if x.enabled==True else None for x in genome.genes.values()]
+    #     # genes = [x for x in genes if x is not None]
+    #     output_neuron_input_genes_len = [x if x.enabled==True else None for x in self.output_neuron.input_genes.values()]
+    #     output_neuron_input_genes_len = len([x for x in output_neuron_input_genes_len if x is not None])
+    #     input_neuron_output_genes_len = [x if x.enabled==True else None for x in self.input_neuron.output_genes.values()]
+    #     input_neuron_output_genes_len = len([x for x in input_neuron_output_genes_len if x is not None])
+    #     if output_neuron_input_genes_len>=2 and input_neuron_output_genes_len>=2 and np.random.uniform() < config.GENE_REMOVE_RATE:
+    #         self.enabled = False
+
+    #     print('GENE DISABLED')
 
     def disable(self):
         self.enabled = False

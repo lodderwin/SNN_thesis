@@ -331,6 +331,7 @@ class Network(object):
                               (avg_weight_diff * config.WEIGHT_COMPATIBILITY_CONSTANT)
         # print(compatibility_score)
         compatible = compatibility_score < config.COMPATIBILITY_THRESHOLD
+        print(compatibility_score)
         return compatible
 
 
@@ -383,6 +384,7 @@ class Network(object):
         for neuron in self.neurons.values():
             neuron.mutate_decay()
             neuron.mutate_threshold()
+
 
         # Genome Structural Mutations
         # Adding Gene
@@ -502,7 +504,22 @@ class Network(object):
                 self.hidden_neurons.append(new_neuron)
 
 
+        # if np.random.uniform() < config.GENE_REMOVE_RATE:
 
+        #     # Select gene at random and disable
+        #     selected_gene = np.random.choice(list(self.genes.values()))
+            
+        #     # Avoid adding the same neuron connection by not choosing a di.
+        
+        #     output_neuron_input_genes_len = [x if x.enabled==True else None for x in selected_gene.output_neuron.input_genes.values()]
+        #     output_neuron_input_genes_len = len([x for x in output_neuron_input_genes_len if x is not None])
+        #     input_neuron_output_genes_len = [x if x.enabled==True else None for x in selected_gene.input_neuron.output_genes.values()]
+        #     input_neuron_output_genes_len = len([x for x in input_neuron_output_genes_len if x is not None])
+
+        #     if output_neuron_input_genes_len>=2 and input_neuron_output_genes_len>=2 and selected_gene.enabled:
+        #         selected_gene.disable()
+
+        #         print('GENE DISABLED')
 
         # rebuild network here:
         self.networkx_network = nx.DiGraph()

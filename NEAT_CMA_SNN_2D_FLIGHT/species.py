@@ -101,10 +101,11 @@ class objective:
             divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
             if done:
                 break
-            divs_lst.append(self.environment.state[0])
+            divs_lst.append(self.environment.state[2][0])
             ref_lst.append(self.environment.height_reward)
             # divs_lst.append(self.environment.thrust_tc)
-        
+        # plt.plot(divs_lst)
+        # plt.plot(ref_lst)
         mav_model.reset()    
         reward_cum = self.environment.reward
         # print(reward_cum, self.environment.state[0], )
@@ -183,9 +184,14 @@ def find_all_routes(genome):
     all_routes_lst = []
     for input_neuron in input_neurons_lst:
         for output_neuron in output_neurons_lst:
-            paths = list(nx.all_simple_paths(genome.networkx_network, input_neuron, output_neuron))  #neuron.id already extracted
+            # try:
+            paths = list(nx.all_simple_paths(genome.networkx_network, input_neuron, output_neuron))
+              #neuron.id already extracted
             # paths = find_all_paths(genome.networkx_network, input_neuron, output_neuron)
             all_routes_lst.extend(paths)
+            
+            # except nx.NodeNotFound:
+                # print("not found, working though")
 
     longest_route = max(all_routes_lst, key=len)
     all_routes_lst.remove(longest_route)
@@ -193,15 +199,16 @@ def find_all_routes(genome):
     longest_routes = []
     longest_routes.append(longest_route)
     #see if multiple lists are of the same length
-    next_longest_route = max(all_routes_lst, key=len)
-    while len(longest_routes[0])==len(next_longest_route):
-        longest_routes.append(next_longest_route)
-        # print(all_routes_lst)
-        all_routes_lst.remove(next_longest_route)
-        if all_routes_lst:
-            next_longest_route = max(all_routes_lst, key=len)
-        else: 
-            break
+    if all_routes_lst:
+        next_longest_route = max(all_routes_lst, key=len)
+        while len(longest_routes[0])==len(next_longest_route):
+            longest_routes.append(next_longest_route)
+            # print(all_routes_lst)
+            all_routes_lst.remove(next_longest_route)
+            if all_routes_lst:
+                next_longest_route = max(all_routes_lst, key=len)
+            else: 
+                break
     # print(longest_routes)
         
     # maybe change 10 in the future
@@ -392,6 +399,8 @@ def place_weights(neuron_matrix, genome):
         fill_array = np.full((len(right_nodes), len(left_nodes)), 0.0002)
         # fill_array_boolean = np.full((len(right_nodes), len(left_nodes)), False)
         for right_node_pos in range(len(right_nodes)):
+            decay = False
+            threshold = False
             for left_node_pos in range(len(left_nodes)):
                 # print(right_nodes[right_node_pos], left_nodes[left_node_pos])
                 # decay = 0.1
@@ -425,6 +434,9 @@ def place_weights(neuron_matrix, genome):
                     # threshold_layer.append(1.0)
                     # decay = 0.01
                     # threshold = 1.0
+            if not decay:
+                decay = genome.neurons[right_nodes[right_node_pos]].v_decay
+                threshold = genome.neurons[right_nodes[right_node_pos]].threshold
 
             decay_layer.append(decay)
             threshold_layer.append(threshold)
@@ -453,7 +465,7 @@ def place_weights(neuron_matrix, genome):
 class Species(object):
 
 
-    def __init__(self, s_id, species_population, genome):
+    def __init__(self, s_id, species_population, genome, genomes=None):
         self.species_id = s_id
         self.species_population = species_population
         self.generation_number = 0
@@ -465,6 +477,8 @@ class Species(object):
         for i in range(1, self.species_population):
             self.genomes[i].reinitialize()
 
+        if genomes:
+            self.genomes = genomes
         # Information used for culling and population control
         self.active = True
         self.no_improvement_generations_allowed = config.STAGNATED_SPECIES_THRESHOLD
@@ -527,13 +541,12 @@ class Species(object):
             neuron_matrix = clean_array(neuron_matrix)
             self.genomes[genome_id].neuron_matrix = neuron_matrix
 
-
             environment = Quadhover()
             objective_genome = objective(environment)
 
             
-            ## CMA-ES learning 
-            # cycles = 3
+            # # CMA-ES learning 
+            # cycles = 10
             # tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
             # weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
 
@@ -684,8 +697,8 @@ class Species(object):
                                     key=lambda k: self.genomes[k].fitness,
                                     reverse=True)
         print('sorted_network_ids', sorted_network_ids, [x.fitness for x in self.genomes.values()])
-        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)/2.0))]
-        dead_network_ids = sorted_network_ids[int(round(float(self.species_population)/2.0)):]
+        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.8))]
+        # dead_network_ids = sorted_network_ids[int(round(float(self.species_population)/2.0)):]
 
         return alive_network_ids
 

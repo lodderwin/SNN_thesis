@@ -257,16 +257,30 @@ class Network(object):
         # give new neurons coordinates
 
         # Create Genes of first network evah
-        for input_neuron in self.input_neurons:
-            for output_neuron in self.output_neurons:
-                innov_num = self.innovation.get_new_innovation_number()
-                self.genes[innov_num] = Gene(innov_num, input_neuron, output_neuron)
-                print(input_neuron,output_neuron)
-                self.edges.append((input_neuron.id, output_neuron.id, 1.))
+        # for input_neuron in self.input_neurons:
+        #     for output_neuron in self.output_neurons:
+        #         innov_num = self.innovation.get_new_innovation_number()
+        #         self.genes[innov_num] = Gene(innov_num, input_neuron, output_neuron)
+        #         # print(input_neuron,output_neuron)
+        #         self.edges.append((input_neuron.id, output_neuron.id, 1.))
+        innov_num = self.innovation.get_new_innovation_number()
+        selected_input_node = np.random.choice(self.input_neurons)
+        selected_output_node = np.random.choice(self.output_neurons)
+        self.genes[innov_num] = Gene(innov_num, selected_input_node, selected_output_node)
+                # print(input_neuron,output_neuron)
+        self.edges.append((selected_input_node.id, selected_output_node.id, 1.))
+
+        input_nodes_id = [x.id for x in self.input_neurons]
+        output_nodes_id = [x.id for x in self.output_neurons]
+
+
+        print(self.edges)
 
         # self.networkx_network = nx.from_edgelist(self.edges)
         self.networkx_network = nx.DiGraph()
         # self.networkx_network.add_edges_from(self.edges)
+        self.networkx_network.add_nodes_from(input_nodes_id)
+        self.networkx_network.add_nodes_from(output_nodes_id)
         self.networkx_network.add_weighted_edges_from(self.edges)
 
         self.fitness = 0.
@@ -331,7 +345,7 @@ class Network(object):
                               (avg_weight_diff * config.WEIGHT_COMPATIBILITY_CONSTANT)
         # print(compatibility_score)
         compatible = compatibility_score < config.COMPATIBILITY_THRESHOLD
-        print(compatibility_score)
+        print(num_excess_genes,num_disjoint_genes,avg_weight_diff, compatibility_score)
         return compatible
 
 
@@ -339,9 +353,9 @@ class Network(object):
         excess_genes = []
         largest_innovation_id = max(self.genes.keys())
 
-        for g_id, genome in comparison_genome.genes.items():
+        for g_id, gene in comparison_genome.genes.items():
             if g_id > largest_innovation_id:
-                excess_genes.append(genome)
+                excess_genes.append(gene)
 
         return excess_genes
 
@@ -394,15 +408,15 @@ class Network(object):
             while not gene_added:
 
                 # No valid genes exist to be added.
-                if (len(self.hidden_neurons) == 0):
-                    break
+                # if (len(self.hidden_neurons) == 0):
+                #     break
 
                 # Certain genes are not valid, such as any gene going to an input node, or any gene from an output node
                 selected_input_node = np.random.choice(list(set().union(self.hidden_neurons, self.input_neurons)))
                 selected_output_node = np.random.choice(list(set().union(self.hidden_neurons, self.output_neurons)))
 
 
-                neurons_lst_order = list(set().union(self.hidden_neurons, self.output_neurons))
+                # neurons_lst_order = list(set().union(self.hidden_neurons, self.output_neurons))
                 ####### function for implementing
                 
 
@@ -441,7 +455,7 @@ class Network(object):
                 if (selected_input_node.id == selected_output_node.id):
                     gene_valid = False
 #
-                    # this should be changed
+                #can't be recurrent
                 if nx.has_path(self.networkx_network, selected_output_node.id, selected_input_node.id):
                     gene_valid = False
 
@@ -526,6 +540,12 @@ class Network(object):
         # self.networkx_network.add_edges_from(self.edges)
         self.edges = [(x.input_neuron.id, x.output_neuron.id, 1.) if x.enabled else None for x in list(self.genes.values())]
         self.edges = [x for x in self.edges if x is not None]
+        input_node_ids = [x.id for x in self.input_neurons]
+        output_node_ids = [x.id for x in self.output_neurons]
+        self.networkx_network.add_nodes_from(input_node_ids)
+        self.networkx_network.add_nodes_from(output_node_ids)
+        if self.hidden_neurons:
+            self.networkx_network.add_nodes_from([x.id for x in self.hidden_neurons])
         self.networkx_network.add_weighted_edges_from(self.edges)
     # def find_node_snake(self, next_nodes):
 

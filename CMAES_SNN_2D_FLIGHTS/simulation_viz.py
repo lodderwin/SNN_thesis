@@ -1,23 +1,61 @@
-from network_viz import draw_net
-from species import find_all_routes, clean_array, place_weights
 from env_3d_var import LandingEnv3D as Quadhover
 from snn_pytorch_mod_double_output import SNN
 import torch
 import numpy as np
 import dill
 import matplotlib.pyplot as plt
-from visualize import DrawNN
+import numpy as np
+# from visualize import DrawNN
+
+def model_parameter_as_vector(model, parameter):  # to initialize xmean
+
+    # select only weights
+    weights_vector = []
+
+    to_be_adjusted_weights_only = [key for key, value in model.state_dict().items() if parameter in key.lower()]
+    for key in to_be_adjusted_weights_only:
+        # for curr_weights in model.state_dict()[key]:
+        # Calling detach() to remove the computational graph from the layer.
+        # numpy() is called for converting the tensor into a NumPy array.
+        curr_weights = model.state_dict()[key].detach().numpy()
+        vector = np.reshape(curr_weights, newshape=(curr_weights.size))
+        weights_vector.extend(vector)
+    return np.array(weights_vector)
+
+def model_parameter_as_dict(model, weights_vector, parameter):
+    to_be_adjusted_weights_only = [key for key, value in model.state_dict().items() if parameter in key.lower()]
+    weights_dict = model.state_dict()
+    start = 0
+    for key in weights_dict:
+        if key in to_be_adjusted_weights_only:
+            # Calling detach() to remove the computational graph from the layer.
+            # numpy() is called for converting the tensor into a NumPy array.
+            w_matrix = weights_dict[key].detach().cpu().numpy()
+            layer_weights_shape = w_matrix.shape
+            layer_weights_size = w_matrix.size
+
+            layer_weights_vector = weights_vector[start:start + layer_weights_size] #gaat hier iets fouts
+            layer_weights_matrix = np.reshape(layer_weights_vector, newshape=(layer_weights_shape))
+            weights_dict[key] = torch.from_numpy(layer_weights_matrix)
+
+            start = start + layer_weights_size
+    return weights_dict
 
 
+def build_model_param(param, model, parameter):
+    with torch.no_grad():
+        # alter function to only adjust weights, set biases to 0
+        weight_dict = model_parameter_as_dict(model, param, parameter)
+        model.load_state_dict(weight_dict)
+    return model
 
 class objective:
     def __init__(self, model, environment):
         self.model = model
         self.environment = environment
+
+        # mav_model = build_model_param(mav_model, 'weight')
         
-
-
-
     def spike_encoder_div(self, OF_lst, prob_ref_div, prob_ref_wx):
         #current encoder
 
@@ -50,16 +88,21 @@ class objective:
 
         return (thrust, pitch)
 
-    def objective_function_single(self, model, ref_div, ref_wx):  # add prob here
+    def objective_function_single(self, ref_div, ref_wx):  # add prob here
 
         steps=100000
         
-        mav_model = model
-        # self.environment.ref_div = prob_ref*2
+        # print(mav_model.state_dict())
+        # mav_model = build_model(x, self.model)
+
+        mav_model = self.model
         self.environment.ref_div = ref_div
         self.environment.ref_wx = ref_wx
         prob_ref_div = self.environment.ref_div/2.
         prob_ref_wx = self.environment.ref_wx/2.
+
+
+        
 
         self.environment.reset()
         ref_vertical = []
@@ -78,7 +121,6 @@ class objective:
             # divs, reward, done, _, _ = self.environment.step(np.asarray([0., 0., 0.]))
             # self.environment._get_reward()    
             # self.environment.render()
-            print(reward)
             if done:
                 break
             ref_horizontal.append(self.environment.forward_reward)
@@ -99,10 +141,10 @@ class objective:
         # plt.savefig('25-08meeting.png')
         mav_model.reset()    
         reward_cum = self.environment.reward
-        print(reward_cum, self.environment.state[3][0], self.environment.state[5][0] )
+        print(reward_cum, self.environment.state[0][0], self.environment.state[2][0] )
         return reward_cum
 
-    def objective_function_multiple(self, model, ref_div, ref_wx, runs):  # add prob here
+    def objective_function_multiple(self, ref_div, ref_wx, runs):  # add prob here
         all_runs_vertical = []
         all_runs_horizontal = []
 
@@ -116,7 +158,7 @@ class objective:
 
             steps=100000
             
-            mav_model = model
+            mav_model = self.model
             # self.environment.ref_div = prob_ref*2
             self.environment.ref_div = ref_div
             self.environment.ref_wx = ref_wx
@@ -196,6 +238,7 @@ class objective:
         ax.plot(np.arange(len(ref_horizontal))*0.02,ref_horizontal,ref_vertical,  c='#ffa72b', alpha=0.9)
         print(ref_horizontal[-1], ref_vertical[-1])
         print(act_horizontal[-1], act_vertical[-1])
+        print(act_horizontal[-1], act_vertical[-1])
         ax.set_zlabel('height (m)')
         ax.set_xlabel('time (s)')
         ax.set_ylabel('distance (m)')
@@ -206,23 +249,18 @@ class objective:
         reward_cum = self.environment.reward
         return reward_cum
 
-with open('paper_0209.pkl', 'rb') as f:
-    neat_class = dill.load(f)
+with open('CMA_ES_0709.pkl', 'rb') as f:
+    organize_training = dill.load(f)
 
-# neat_class.species[neat_class.best_species].genomes[neat_class.best_genome]
-neuron_matrix = find_all_routes(neat_class.best_genome)
-neuron_matrix = clean_array(neuron_matrix)
-model = place_weights(neuron_matrix, neat_class.best_genome)
-network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
-objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 1., 1., 50)
-# objective.objective_function_single(model, 1., 1.)
+
+model = build_model_param(organize_training.x_weights, organize_training.objective.model, 'weight')
+objective = objective(model, environment)
+objective.objective_function_multiple(1., 1., 50)
+# objective.objective_function_single(1., 1.)
 # print(model.state_dict())
-print(neat_class.best_genome.fitness, neat_class.best_genome)
 
 
-network_viz.view()
 # print(neat_class.species[neat_class.best_species].genomes[neat_class.best_genome].fitness, neat_class.best_genome)
 
 

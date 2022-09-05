@@ -42,7 +42,7 @@ class NEAT(object):
         self.innovation = Innovation()
 
         initial_genome = Network(self.initial_genome_topology, self.innovation)
-        self.create_new_species_first(initial_genome, self.population_N)
+        self.create_new_species(initial_genome, self.population_N)
 
 
 
@@ -54,9 +54,8 @@ class NEAT(object):
 
             avg_fitness_scores = {}
             # Run the current generation for each species
-            div_training = [np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5)]
-            wx_training = [np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5), np.random.uniform(0.5, 1.5)]
-
+            div_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
+            wx_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
             for s_id, s in self.species.items():
                 avg_fitness = s.run_generation(i, div_training, wx_training)
                 if avg_fitness != None:
@@ -80,6 +79,8 @@ class NEAT(object):
                 s.evolve()   
            
             # Create new species from evolved current species
+
+            # Turned off for now SPECIATION=FALSE
             if config.SPECIATION:
                 self.perform_speciation()
             
@@ -195,18 +196,18 @@ class NEAT(object):
         return active_population
 import time
 
-#either of the two 
+# either of the two 
 # a = NEAT()
-# a.start_evolutionary_process(iterations=10)
-# with open('paper.pkl', 'wb') as outp:
+# a.start_evolutionary_process(iterations=1)
+# with open('paper_0209_1.pkl', 'wb') as outp:
 #     dill.dump(a, outp)
 
-with open('paper.pkl', 'rb') as f:
+with open('paper_0209_1.pkl', 'rb') as f:
     a = dill.load(f)
-for i in range(500):
+for i in range(100):
     start_time = time.time()
     a.start_evolutionary_process(iterations=1)
-    with open('paper.pkl', 'wb') as outp:
+    with open('paper_0209_1.pkl', 'wb') as outp:
         dill.dump(a, outp)
     print("--- %s seconds ---" % (time.time() - start_time))
 

@@ -257,18 +257,19 @@ class Network(object):
         # give new neurons coordinates
 
         # Create Genes of first network evah
-        # for input_neuron in self.input_neurons:
-        #     for output_neuron in self.output_neurons:
-        #         innov_num = self.innovation.get_new_innovation_number()
-        #         self.genes[innov_num] = Gene(innov_num, input_neuron, output_neuron)
-        #         # print(input_neuron,output_neuron)
-        #         self.edges.append((input_neuron.id, output_neuron.id, 1.))
-        innov_num = self.innovation.get_new_innovation_number()
-        selected_input_node = np.random.choice(self.input_neurons)
-        selected_output_node = np.random.choice(self.output_neurons)
-        self.genes[innov_num] = Gene(innov_num, selected_input_node, selected_output_node)
+        for input_neuron in self.input_neurons:
+            for output_neuron in self.output_neurons:
+                innov_num = self.innovation.get_new_innovation_number()
+                self.genes[innov_num] = Gene(innov_num, input_neuron, output_neuron)
                 # print(input_neuron,output_neuron)
-        self.edges.append((selected_input_node.id, selected_output_node.id, 1.))
+                self.edges.append((input_neuron.id, output_neuron.id, 1.))
+
+        # innov_num = self.innovation.get_new_innovation_number()
+        # selected_input_node = np.random.choice(self.input_neurons)
+        # selected_output_node = np.random.choice(self.output_neurons)
+        # self.genes[innov_num] = Gene(innov_num, selected_input_node, selected_output_node)
+                # print(input_neuron,output_neuron)
+        # self.edges.append((selected_input_node.id, selected_output_node.id, 1.))
 
         input_nodes_id = [x.id for x in self.input_neurons]
         output_nodes_id = [x.id for x in self.output_neurons]
@@ -279,8 +280,8 @@ class Network(object):
         # self.networkx_network = nx.from_edgelist(self.edges)
         self.networkx_network = nx.DiGraph()
         # self.networkx_network.add_edges_from(self.edges)
-        self.networkx_network.add_nodes_from(input_nodes_id)
-        self.networkx_network.add_nodes_from(output_nodes_id)
+        # self.networkx_network.add_nodes_from(input_nodes_id)
+        # self.networkx_network.add_nodes_from(output_nodes_id)
         self.networkx_network.add_weighted_edges_from(self.edges)
 
         self.fitness = 0.
@@ -407,9 +408,9 @@ class Network(object):
             gene_added = False
             while not gene_added:
 
-                # No valid genes exist to be added.
-                # if (len(self.hidden_neurons) == 0):
-                #     break
+                # No valid genes exist to be added. Pay attention
+                if (len(self.hidden_neurons) == 0):
+                    break
 
                 # Certain genes are not valid, such as any gene going to an input node, or any gene from an output node
                 selected_input_node = np.random.choice(list(set().union(self.hidden_neurons, self.input_neurons)))

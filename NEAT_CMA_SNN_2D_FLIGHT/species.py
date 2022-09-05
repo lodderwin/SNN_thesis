@@ -507,6 +507,7 @@ class Species(object):
     def evolve(self):
         if self.active:
             survivor_ids = self.select_survivors()
+            print('got here')
             self.create_next_generation(survivor_ids)
             
             self.generation_number += 1
@@ -636,6 +637,7 @@ class Species(object):
 
 
         while (genome_id < self.species_population):
+            
 
             # Choose an old genome at random from the survivors
             
@@ -643,7 +645,6 @@ class Species(object):
             index_choice = self.get_skewed_random_sample(len(replicate_ids))
             random_genome = self.genomes[replicate_ids[index_choice]].clone()
 
-            
 
 
             # Clone
@@ -697,7 +698,7 @@ class Species(object):
                                     key=lambda k: self.genomes[k].fitness,
                                     reverse=True)
         print('sorted_network_ids', sorted_network_ids, [x.fitness for x in self.genomes.values()])
-        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.8))]
+        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.5))]
         # dead_network_ids = sorted_network_ids[int(round(float(self.species_population)/2.0)):]
 
         return alive_network_ids

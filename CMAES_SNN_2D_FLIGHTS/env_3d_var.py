@@ -132,7 +132,7 @@ class LandingEnv3D:
         reward = self._get_reward()
 
         self.reward = self.reward + reward
-
+        # print('b', self.reward)
         # Check whether done
         self.done = self._check_out_of_bounds() | self._check_out_of_time() | self._check_projected_landing()
 
@@ -144,35 +144,64 @@ class LandingEnv3D:
                 self.state[0:3], pos_min.reshape(-1, 1), pos_max.reshape(-1, 1)
             )
             self.t = np.clip(self.t, 0.0, self._param["time bound"])
-
-            self.reward = self.reward + np.abs(self.state[5][0]*10)
-            self.reward = self.reward + np.abs(self.state[3][0]*10)
+            # print(self.reward)
+            self.reward = self.reward + np.abs(self.state[5][0]*5000)
+            self.reward = self.reward + np.abs(self.state[3][0]*500)
             # second_calc_place_holder = self.height_reward
             self.forward_reward = (self.ref_wx*self.state[2][0]/2)*self.param["dt"]
+            # print(self.state[3][0], self.state[5][0])
             if self.state[2][0] == self._param["state bounds"][1, 2]:
                 # self.reward = self.reward + np.abs((self.max_t - self.t) * self.max_h)
-
                 while self.height_reward >= self._param["state bounds"][0, 2]:
+                    self.t = self.t + self.param["dt"]
                     self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
                     # self.forward_reward = self.forward_reward + (self.ref_wx*self.state[2][0]/2)*self.param["dt"]
                     self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
-                    self.reward = self.reward + np.abs(self.param["dt"]* (self.max_h- self.height_reward)) + np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
-
+                    # self.reward = self.reward + np.abs(self.param["dt"]* ((self.max_h- self.height_reward)**1)) + ((np.abs(self.state[0][0] - self.forward_reward)**1)*self.param["dt"])
+                    self.reward = self.reward + np.abs(self.t* ((self.max_h- self.height_reward)**1)) + ((np.abs(self.state[0][0] - self.forward_reward)**1)*self.t)
                 # self.reward = self.reward + np.abs((t_adm - self.t) * self.max_h)
+            
             if np.abs(self.state[2][0] - self._param["state bounds"][0, 2])<0.01:
                 
                 while self.height_reward >= self._param["state bounds"][0, 2]:
+                    self.t = self.t + self.param["dt"]
                     self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
                     # self.reward = self.reward + np.abs(self.height_reward/(self.height_reward/4) *self.height_reward *0.5)#dit is nog fout
                     self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
                     
-                    self.reward = self.reward + np.abs(self.param["dt"]*self.height_reward) + np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
-
+                    # self.reward = self.reward + np.abs(self.param["dt"]*(self.height_reward**1)) + ((np.abs(self.state[0][0] - self.forward_reward))**1)*self.param["dt"]
+                    self.reward = self.reward + np.abs(self.t*(self.height_reward**1)) + ((np.abs(self.state[0][0] - self.forward_reward))**1)*self.t
+            
+            
+            #horizontal reward
+            
+            if self.state[0][0] == self._param["state bounds"][1, 0]:
+                # self.reward = self.reward + np.abs((self.max_t - self.t) * self.max_h)
+                while self.height_reward >= self._param["state bounds"][0, 2]:
+                    self.t = self.t + self.param["dt"]
+                    self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
+                    # self.forward_reward = self.forward_reward + (self.ref_wx*self.state[2][0]/2)*self.param["dt"]
+                    self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+                    # self.reward = self.reward + np.abs(self.param["dt"]* ((self.max_h- self.height_reward)**1)) + ((np.abs(self.state[0][0] - self.forward_reward)**1)*self.param["dt"])
+                    self.reward = self.reward + np.abs(self.t* ((self.max_h- self.height_reward)**1)) + ((np.abs(self.state[0][0] - self.forward_reward)**1)*self.t)
+                # self.reward = self.reward + np.abs((t_adm - self.t) * self.max_h)
+            
+            if self.state[0][0] == self._param["state bounds"][0, 0]:
+                # self.reward = self.reward + np.abs((self.max_t - self.t) * self.max_h)
+                while self.height_reward >= self._param["state bounds"][0, 2]:
+                    self.t = self.t + self.param["dt"]
+                    self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
+                    # self.forward_reward = self.forward_reward + (self.ref_wx*self.state[2][0]/2)*self.param["dt"]
+                    self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+                    # self.reward = self.reward + np.abs(self.param["dt"]* ((self.max_h- self.height_reward)**1)) + ((np.abs(self.state[0][0] - self.forward_reward)**1)*self.param["dt"])
+                    self.reward = self.reward + np.abs(self.t* ((self.max_h- self.height_reward)**1)) + ((np.abs(self.state[0][0] - self.forward_reward)**1)*self.t)
+                #
+            # print('a', self.reward)
             # self.height_reward = second_calc_place_holder
 
             #for wx
             # if self.state[0] == self._param["state bounds"][1, 0]:
-            #     while self.forward_reward >= self._param["state bounds"][0, 0]:
+                # while self.forward_reward >= self._param["state bounds"][0, 0]:
             #         self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
             #         self.reward = self.reward + np.abs(self.param["dt"]* (self._param["state bounds"][1, 0] - self.forward_reward))
 
@@ -291,7 +320,7 @@ class LandingEnv3D:
         #         * self.param["obs weight"]
         #     ).sum()
         # ).clip(-1.0, 1.0)
-        if self.t<0.5:
+        if self.t<1.0:
             None
         else:
             self.height_reward =  self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
@@ -299,8 +328,8 @@ class LandingEnv3D:
             self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
             self.forward_reward_adm = self.forward_reward_adm + (self.ref_wx*self.height_reward/2)*self.param["dt"]
 
-        height_reward = np.abs(self.state[2][0] - self.height_reward)*self.param["dt"]
-        forward_reward = np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
+        height_reward = ((np.abs(self.state[2][0] - self.height_reward))**1)*self.t   #        *self.param["dt"]
+        forward_reward =((np.abs(self.state[0][0] - self.forward_reward))**1)*self.t #           *self.param["dt"]
         return  forward_reward + height_reward
     
     def reset(self, h0=5.0):
@@ -369,13 +398,13 @@ class LandingEnv3D:
             self.t += self.param["dt"]
 
 
-            self.state[2][0] += -0.05
+            self.state[2][0] += -0.0
             self.state[3][0] += 0.
             self.state[0][0] += 0.0
 
             reward = self._get_reward()
             self.reward = self.reward + reward
-            print('a', self.reward)
+            print('a', reward)
             plt_traj_ref.append(self.height_reward)
             plt_traj.append(self.state[2][0])
             
@@ -399,8 +428,8 @@ class LandingEnv3D:
 
                     # self.reward = self.reward + np.abs((t_adm - self.t) * self.max_h)
                 if np.abs(self.state[2][0] - self._param["state bounds"][0, 2])<0.01:
-                    self.reward = self.reward + np.abs(self.state[5][0]*3)
-                    self.reward = self.reward + np.abs(self.state[3][0]*3)
+                    self.reward = self.reward + np.abs(self.state[5][0]*10)
+                    self.reward = self.reward + np.abs(self.state[3][0]*10)
                     while self.height_reward >= self._param["state bounds"][0, 2]:
                         self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
                         self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]

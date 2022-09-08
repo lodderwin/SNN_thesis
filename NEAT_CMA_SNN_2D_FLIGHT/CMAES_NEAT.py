@@ -63,7 +63,10 @@ class CMA_ES:
 
         self.function = function
 
+        
+
     def optimize_run(self, runs, div, wx, genome):
+        counts = 0
         for i in range(runs):
             print('gogogo', i)
             for k in range(int(self.lamba)):
@@ -86,7 +89,20 @@ class CMA_ES:
             # self.arfitness = -np.sort(-self.arfitness)
 
             self.arindex = np.argsort(self.arfitness) #low to high
+
+
             self.arfitness = np.sort(self.arfitness)
+
+            best_result = self.arfitness[0]
+            worst_result = self.arfitness[-1]
+
+            variation_performance = (worst_result - best_result)/best_result
+
+            if variation_performance<0.05:
+                counts = counts + 1
+                if counts ==2:
+                    print('trying is stopped!')
+                    break                
 
             # self.arfitness, self.arindex = self.arfitness[::-1], self.arindex[::-1]
 
@@ -118,10 +134,11 @@ class CMA_ES:
                 print('gp')
             
             print(self.counteval, self.arfitness[0], 'worst :', self.arfitness[-1])
+            print(self.arindex[0])
             self.array_plot.append([self.arx[0,self.arindex[0]], self.arx[1,self.arindex[0]]])
 
         #write weights to pickle
             weights = self.arx
             best_fitness = self.arfitness[0]
 
-        return weights[:,0], best_fitness
+        return weights[:,self.arindex[0]], best_fitness

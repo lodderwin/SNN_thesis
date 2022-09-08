@@ -23,7 +23,16 @@ class objective:
     def __init__(self, model, environment):
         self.model = model
         # self.model = self.model.to(device=device)
+        # self.N_weights = int(len(model_parameter_as_vector(model, 'weight')))
+
+        self.N_decay = int(len(model_parameter_as_vector(model, 'v_decay')))
+        self.N_threshold = int(len(model_parameter_as_vector(model, 'thresh')))
+
         self.N_weights = int(len(model_parameter_as_vector(model, 'weight')))
+        self.N = int(self.N_decay + self.N_threshold + self.N_weights)
+
+
+
         self.environment = environment
         
 
@@ -74,7 +83,12 @@ class objective:
         prob_ref_wx = self.environment.ref_wx/2.
 
 
-        mav_model = build_model_param(x, mav_model, 'weight')
+        # mav_model = build_model_param(x, mav_model, 'weight')
+
+        x_decay, x_thresh, x_weights = x[:self.N_decay], x[self.N_decay-1:self.N_threshold], x[self.N_threshold-1:]
+        mav_model = build_model_param(x_decay, mav_model, 'v_decay')
+        mav_model = build_model_param(x_thresh, mav_model, 'threshold')
+        mav_model = build_model_param(x_weights, mav_model, 'weight')
 
         self.environment.reset()
         divs_lst = []
@@ -164,17 +178,59 @@ class organize_training():
     def __init__(self, objective):
         self.objective = objective
         self.objective_function = self.objective.objective_function_CMAES
-        self.x_weights = np.random.uniform(0.3, 0.7, size=(1, self.objective.N_weights)).squeeze()
-        self.optimizer = CMA_ES(self.objective_function, self.objective.N_weights, self.x_weights)
+        # self.x_weights = np.random.uniform(0.3, 0.7, size=(1, self.objective.N_weights)).squeeze()
+        # self.optimizer = CMA_ES(self.objective_function, self.objective.N, self.x_weights)
+        self.div_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
+        self.wx_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
+
+        self.initialisation_values = [0.5, 0.7, 0.5]
+
+        self.worst_performance = 1000000000000.
+        self.best_ratio = 0.
+        self.xmean = []
+
+        self.plot_array = []
+
+    def initialise_from_scratch(self):
+        for i in range(100):
+            x_decay = np.random.uniform(self.initialisation_values[0]-0.1, self.initialisation_values[0] + 0.3, size=(1, self.objective.N_decay)).squeeze()
+            # self.objective.model = build_model_param(x_decay, self.objective.model, 'v_decay')
+            x_thresh = np.random.uniform(self.initialisation_values[1]-0.1, self.initialisation_values[1] + 0.1, size=(1, self.objective.N_threshold)).squeeze()
+            # self.objective.model = build_model_param(x_thresh, self.objective.model, 'thresh')
+            x_weights = np.random.uniform(self.initialisation_values[2]-0.3, self.initialisation_values[2] + 0.3, size=(1, self.objective.N_weights)).squeeze()
+            # self.objective.model = build_model_param(x_weights, self.objective.model, 'weight')
+
+            xmean = np.concatenate((x_decay, x_thresh, x_weights), axis=0)
+            div_training = self.div_training
+            wx_training = self.wx_training
+            self.optimizer = CMA_ES(self.objective_function, self.objective.N, xmean)
+            weights, best_fitness, worst_fitness = self.optimizer.optimize_run(1, div_training, wx_training)
+            print(((worst_fitness-best_fitness)/best_fitness))
+            if ((worst_fitness-best_fitness)/best_fitness)>self.best_ratio:
+                # self.write_weights(weights)
+                self.xmean = weights
+                self.best_ratio = ((worst_fitness-best_fitness)/best_fitness)
+        return self.xmean
+
+    def init_optimizer(self):
+        self.optimizer = CMA_ES(self.objective_function, self.objective.N, np.asarray(self.xmean))
+        self.plot_array.append(self.worst_performance)
+
     def train(self, cycles):
         for i in range(cycles):
-            div_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
-            wx_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
-            self.x_weights, best_fitness = self.optimizer.optimize_run(10, div_training, wx_training)
-# model = SNN([10,15,5], 4)
+            div_training = self.div_training
+            wx_training = self.wx_training
+            self.xmean, best_fitness, worst_fitness = self.optimizer.optimize_run(10, div_training, wx_training)
+            self.plot_array.append(best_fitness)
+
+# with open('CMA_ES_0709.pkl', 'rb') as f:
+#     d = dill.load(f)
+# model = SNN([10,10], 4)
 # environment = Quadhover()
 # objective = objective(model, environment)
 # organize_training = organize_training(objective=objective)
+# organize_training.initialise_from_scratch()
+# organize_training.init_optimizer()
 # organize_training.train(1)
 # with open('CMA_ES_0709.pkl', 'wb') as outp:
 #     dill.dump(organize_training, outp)

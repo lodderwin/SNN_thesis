@@ -206,7 +206,7 @@ class objective:
         reward_cum = self.environment.reward
         return reward_cum
 
-with open('paper_0209.pkl', 'rb') as f:
+with open('paper_0209_1_fast_mutation_1_CMA.pkl', 'rb') as f:
     neat_class = dill.load(f)
 
 # neat_class.species[neat_class.best_species].genomes[neat_class.best_genome]

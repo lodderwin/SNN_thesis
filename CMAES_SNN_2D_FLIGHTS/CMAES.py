@@ -70,8 +70,8 @@ class CMA_ES:
                 self.arx[:,k] = self.xmean.squeeze() + (self.sigma * (np.dot(np.dot(self.B,self.D),self.arz[:,k].reshape(-1,1)))).squeeze()
 
                 ########### constraint
-                self.arx[self.arx > 1.] = 0.99999
-                self.arx[self.arx < 0.] = 0.0001
+                self.arx[self.arx > 1.] = 0.1
+                self.arx[self.arx < 0.] = 0.05
 
                 self.arfitness[k] = self.function(self.arx[:,k], div[0], wx[0]) + self.function(self.arx[:,k], div[1], wx[1]) + self.function(self.arx[:,k], div[2], wx[2]) + self.function(self.arx[:,k], div[3], wx[3]) + self.function(self.arx[:,k], div[4], wx[4]) 
                 # self.function (genome nodig, place weights, objective)
@@ -121,6 +121,7 @@ class CMA_ES:
         #write weights to pickle
             weights = self.arx
             best_fitness = self.arfitness[0]
+            worst_fitness = self.arfitness[-1]
             print(best_fitness)
-        return weights[:,0], best_fitness
+        return weights[:,self.arindex[0]], best_fitness, worst_fitness
 

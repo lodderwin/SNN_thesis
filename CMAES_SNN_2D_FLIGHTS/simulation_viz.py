@@ -238,13 +238,12 @@ class objective:
         ax.plot(np.arange(len(ref_horizontal))*0.02,ref_horizontal,ref_vertical,  c='#ffa72b', alpha=0.9)
         print(ref_horizontal[-1], ref_vertical[-1])
         print(act_horizontal[-1], act_vertical[-1])
-        print(act_horizontal[-1], act_vertical[-1])
         ax.set_zlabel('height (m)')
         ax.set_xlabel('time (s)')
         ax.set_ylabel('distance (m)')
         plt.title('Divergence: '+ str(ref_div))
         ax.view_init(15, 90)
-        plt.savefig('02-09meeting.png')
+        # plt.savefig('02-09meeting.png')
         mav_model.reset()    
         reward_cum = self.environment.reward
         return reward_cum
@@ -254,7 +253,18 @@ with open('CMA_ES_0709.pkl', 'rb') as f:
 
 environment = Quadhover()
 
-model = build_model_param(organize_training.x_weights, organize_training.objective.model, 'weight')
+model = organize_training.objective.model
+
+x = organize_training.xmean
+x_decay, x_thresh, x_weights = x[:organize_training.objective.N_decay], x[organize_training.objective.N_decay-1:organize_training.objective.N_threshold], x[organize_training.objective.N_threshold-1:]
+model = build_model_param(x_decay, model, 'v_decay')
+model = build_model_param(x_thresh, model, 'threshold')
+model = build_model_param(x_weights, model, 'weight')
+
+# model = build_model_param(organize_training.xmean, organize_training.objective.model, 'weight')
+
+
+
 objective = objective(model, environment)
 objective.objective_function_multiple(1., 1., 50)
 # objective.objective_function_single(1., 1.)

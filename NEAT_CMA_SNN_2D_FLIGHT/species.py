@@ -213,7 +213,7 @@ def find_all_routes(genome):
         
     # maybe change 10 in the future
     # neuron_matrix = np.full((list(genome.neurons.keys())[-1], len(longest_routes[0])), 0, dtype=object)
-    neuron_matrix = np.full((100, len(longest_routes[0])), 0, dtype=object)
+    neuron_matrix = np.full((1000, len(longest_routes[0])), 0, dtype=object)
     # neuron_matrix = np.zeros((100, len(longest_routes[0])))
     neuron_matrix[0:len(input_neurons_lst), 0] = np.asanyarray(input_neurons_lst).T
     neuron_matrix[0:len(output_neurons_lst), -1] = np.asanyarray(output_neurons_lst).T
@@ -307,9 +307,12 @@ def find_all_routes(genome):
     if hidden_neurons:
         for neuron in hidden_neurons:
             # print(gene_logbook[neuron][0], neuron, row_hidden_nodes)
-            neuron_matrix[row_hidden_nodes, gene_logbook[neuron][0]] = neuron
-            
-            row_hidden_nodes += 1
+            try:
+                neuron_matrix[row_hidden_nodes, gene_logbook[neuron][0]] = neuron
+                
+                row_hidden_nodes += 1
+            except IndexError:
+                pass
     # neuron_matrix = clean_array(neuron_matrix)
     network_neurons = [x.id for x in genome.neurons.values()]
 
@@ -547,21 +550,21 @@ class Species(object):
 
             
             # # CMA-ES learning 
-            # cycles = 10
-            # tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
-            # weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
+            cycles = 35
+            tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
+            weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
 
-            # # print('aii', weights)
-            # # for cycle in range(cycles):  
-            # cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
-            # new_weights, best_fitness = cma_es_class.optimize_run(cycles, div_training, wx_training, self.genomes[genome_id])
+            # print('aii', weights)
+            # for cycle in range(cycles):  
+            cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
+            new_weights, best_fitness = cma_es_class.optimize_run(cycles, div_training, wx_training, self.genomes[genome_id])
             
-            # # print('aai', new_weights)
+            # print('aai', new_weights)
 
-            # gene_ad = 0
-            # for gene in tags:
-            #     self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
-            #     gene_ad = gene_ad + 1
+            gene_ad = 0
+            for gene in tags:
+                self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
+                gene_ad = gene_ad + 1
 
 
 
@@ -572,7 +575,7 @@ class Species(object):
                       
             reward = 0
             for i in range(len(div_training)):
-                add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
+                add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])  + objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
                 reward = reward + add
                 # print(div_training[i], wx_training[i], add)
             # reward = reward/float(len(div_training))
@@ -586,6 +589,27 @@ class Species(object):
         # print(genome_scores)
         self.best_genome = max(genome_scores, key=genome_scores.get)
         return species_score
+
+    def first_round_evolutionary_process_species(self, div_training, wx_training):
+        for genome_id, genome in self.genomes.items():
+            # draw_net(genome)
+            # try:
+            print('species:', self.species_id, '    genome', genome_id)
+            neuron_matrix = find_all_routes(self.genomes[genome_id])
+            neuron_matrix = clean_array(neuron_matrix)
+            self.genomes[genome_id].neuron_matrix = neuron_matrix
+
+            environment = Quadhover()
+            objective_genome = objective(environment)
+            model = place_weights(neuron_matrix, self.genomes[genome_id])
+            reward = 0.
+            for i in range(len(div_training)):
+                    add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])  + objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
+                    reward = reward + add/2.
+                # print(div_training[i], wx_training[i], add)
+            # reward = reward/float(len(div_training))
+            print('reward', reward)
+
     # def generate_fitness(self):
     #     species_score = 0
         
@@ -658,7 +682,8 @@ class Species(object):
                 genomes[genome_id] = self.crossover(random_genome, random_genome_mate)
 
             # Mutate the newly added genome
-            genomes[genome_id].mutate()
+            for i in range(50):       
+                genomes[genome_id].mutate()
 
 
             genome_id += 1
@@ -679,7 +704,7 @@ class Species(object):
             if g_id in unfit_genome.genes:
 
                 # Randomly inherit from unfit genome
-                if np.random.uniform(-1., 1.) < 0:
+                if np.random.uniform(-1., 1.) < -0.5:
                     gene.weight = unfit_genome.genes[g_id].weight
 
                 # Have chance of disabling if either parent is disabled
@@ -690,6 +715,15 @@ class Species(object):
                         else:
                             None
 
+        for n_id, neuron in fit_genome.neurons.items():
+
+            if n_id in unfit_genome.neurons:
+                if np.random.uniform(-1., 1.) < 0:
+                    neuron.v_decay = unfit_genome.neurons[n_id].v_decay
+                    neuron.threshold = unfit_genome.neurons[n_id].threshold
+
+
+        
         return fit_genome
 
 

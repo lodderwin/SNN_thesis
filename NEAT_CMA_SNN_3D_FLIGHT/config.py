@@ -1,9 +1,9 @@
 # Configurations for NEAT
 
 
-INPUT_NEURONS = 10
-OUTPUT_NEURONS = 4
-POPULATION = 50
+INPUT_NEURONS = 18
+OUTPUT_NEURONS = 6
+POPULATION = 150
 # True = population is const across all species and changing
 # False = genomes may still move species, but each new species gets POPULATION starting genomes
 DYNAMIC_POPULATION = True
@@ -15,8 +15,8 @@ WEAK_SPECIES_THRESHOLD = 10  #orignal 5
 ACTIVATION_THRESHOLD = 0.5
 WEIGHT_MUTATION_RATE = 0.2
 UNIFORM_WEIGHT_MUTATION_RATE = 0.9
-ADD_GENE_MUTATION = 0.3 # Default 0.05
-ADD_NODE_MUTATION = 0.25# Default 0.03
+ADD_GENE_MUTATION = 0.2 # Default 0.05
+ADD_NODE_MUTATION = 0.15# Default 0.03
 ENABLE_GENE_MUTATION_RATE = 0.1 # 0.0 means no reenabling of genes possible
 INHERIT_DISABLED_GENE_RATE = 0.2
 COMPATIBILITY_THRESHOLD = 3.0  #original 3

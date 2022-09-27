@@ -4,7 +4,6 @@ from collections import namedtuple
 from typing import Optional, NamedTuple, Tuple, Any, Sequence
 from numpy.core.numeric import outer
 # from quad_hover import QuadHover
-from quad_hover_var_div import QuadHover
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -68,7 +67,7 @@ class CMA_ES:
 
         
 
-    def optimize_run(self, runs, div, wx, genome):
+    def optimize_run(self, runs, ref_x, ref_y, ref_z, genome):
         counts = 0
         counts_noprogress = 0
         for i in range(runs):
@@ -82,7 +81,7 @@ class CMA_ES:
                 self.arx[self.arx > 1.] = 0.99999
                 self.arx[self.arx < 0.] = 0.0001
 
-                self.arfitness[k] = self.function(self.arx[:,k], div[0], wx[0], genome) + self.function(self.arx[:,k], div[1], wx[1], genome) + self.function(self.arx[:,k], div[2], wx[2], genome) + self.function(self.arx[:,k], div[3], wx[3], genome) + self.function(self.arx[:,k], div[4], wx[4], genome) 
+                self.arfitness[k] = self.function(self.arx[:,k], ref_x[0], ref_y[0], ref_z[0], genome) + self.function(self.arx[:,k], ref_x[1], ref_y[1], ref_z[1], genome) + self.function(self.arx[:,k], ref_x[2], ref_y[2], ref_z[2], genome) + self.function(self.arx[:,k], ref_x[3], ref_y[3], ref_z[3], genome) + self.function(self.arx[:,k], ref_x[4], ref_y[4], ref_z[4], genome) 
                 # self.function (genome nodig, place weights, objective)
                 self.counteval = self.counteval + 1 
 
@@ -214,7 +213,7 @@ class CMA_ES_single:
 
         
 
-    def optimize_run(self, runs, div, wx, genome):
+    def optimize_run(self, runs, genome):
         counts = 0
         counts_noprogress = 0
         for i in range(runs):
@@ -227,7 +226,7 @@ class CMA_ES_single:
                 ########### constraint
                 self.arx[self.arx > 1.] = 0.99999
                 self.arx[self.arx < 0.] = 0.0001
-
+#TODO: continue here
                 self.arfitness[k] = self.function(self.arx[:,k], genome) 
                 # self.function (genome nodig, place weights, objective)
                 self.counteval = self.counteval + 1 

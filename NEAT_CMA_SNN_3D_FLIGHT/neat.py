@@ -19,7 +19,6 @@ import dill
 # objective function in neat Env
 #genome = network
 
-from snn_pytorch_mod import SNN
 
 from visualize import DrawNN
 
@@ -48,21 +47,24 @@ class NEAT(object):
 
 
         self.best_species = None
-        self.div_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
-        self.wx_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
+        self.range_coordinates_x = (-2,2)
+        self.range_coordinates_y = (-2,2)
+        self.range_coordinates_z = (0.5, 4.5)
+        self.ref_x = [np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1])]
+        self.ref_y = [np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1])]
+        self.ref_z = [np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1])]
+
     def start_evolutionary_process(self, iterations=1):
         i = 0
         # while not self.solved:
         while i<iterations:
+            self.ref_x = [np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1])]
+            self.ref_y = [np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1])]
+            self.ref_z = [np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1])]
 
             avg_fitness_scores = {}
-            # Run the current generation for each species
-            # div_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
-            # wx_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
-            div_training = self.div_training
-            wx_training = self.wx_training
             for s_id, s in self.species.items():
-                avg_fitness = s.run_generation(i, div_training, wx_training)
+                avg_fitness = s.run_generation(i, self.ref_x, self.ref_y, self.ref_z)
                 if avg_fitness != None:
                     avg_fitness_scores[s_id] = avg_fitness
                     print('aaa', avg_fitness)
@@ -205,29 +207,40 @@ class NEAT(object):
 import time
 
 # either of the two
-start_time = time.time() 
+# start_time = time.time() 
+# a = NEAT()
+# # a.first_round_evolutionary_process_neat()
+# a.start_evolutionary_process(iterations=1)
+# with open('testing_decreasedCMAES_3D.pkl', 'wb') as outp:
+#     dill.dump(a, outp)
+
+# print("--- %s seconds ---" % (time.time() - start_time))
+
+
+# with open('testing_decreasedCMAES_3D.pkl', 'rb') as f:
+#     a = dill.load(f)
+# for i in range(100):
+#     start_time = time.time()
+#     a.start_evolutionary_process(iterations=1)
+#     with open('testing_decreasedCMAES_3D.pkl', 'wb') as outp:
+#         dill.dump(a, outp)
+#     print("--- %s seconds ---" % (time.time() - start_time))
+
+# start_time = time.time() 
+
 a = NEAT()
-# a.first_round_evolutionary_process_neat()
-a.start_evolutionary_process(iterations=1)
-with open('testing_decreasedCMAES.pkl', 'wb') as outp:
-    dill.dump(a, outp)
+a.species[0].create_random_network(0, 50, 8) 
+network_viz = draw_net(a.species[0].genomes[0])
 
-print("--- %s seconds ---" % (time.time() - start_time))
+network_viz.view()
+# print("--- %s seconds ---" % (time.time() - start_time))
 
-
-with open('testing_decreasedCMAES.pkl', 'rb') as f:
-    a = dill.load(f)
-for i in range(100):
-    start_time = time.time()
-    a.start_evolutionary_process(iterations=1)
-    with open('testing_decreasedCMAES.pkl', 'wb') as outp:
-        dill.dump(a, outp)
-    print("--- %s seconds ---" % (time.time() - start_time))
+# draw_nn = DrawNN(model)
+# draw_nn.draw()
 
 
 
-
-
+# if neuron matrix more than blabla rows, don't add neuron
 
 
 #end with last run with 100 div's, most versatile one
@@ -235,8 +248,7 @@ for i in range(100):
 # matrix = find_all_routes(a.species[5].genomes[2])
 # matrix = clean_array(matrix)
 # model = place_weights(matrix,a.species[5].genomes[2] )
-# draw_nn = DrawNN(model)
-# draw_nn.draw()
+
 
 
 #er gaat iets fout met de volgorde van neuron en genes

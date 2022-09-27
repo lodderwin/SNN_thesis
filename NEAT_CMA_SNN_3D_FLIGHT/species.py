@@ -3,7 +3,7 @@ import numpy as np
 from scipy.stats import expon
 from network import Network
 import config as config
-from env_3d_var import LandingEnv3D as Quadhover
+from env_3d_var_point import LandingEnv3D as Quadhover
 import matplotlib.pyplot as plt
 # import FlapPyBird.flappy as flpy
 import os
@@ -44,28 +44,39 @@ class objective:
         return x
 
 
-    def spike_encoder_div(self, OF_lst, prob_ref_div, prob_ref_wx):
+    def spike_encoder_div(self, OF_lst, prob_ref_div, prob_ref_wx, prob_ref_wy):
         #current encoder
-
+        ref_div_node_min = bool(np.random.uniform()>=(1-prob_ref_div[1]))
         D_plus = bool(OF_lst[-1][2]>0.) * 1.
         D_min = bool(OF_lst[-1][2]<0.) * 1.
 
         D_delta_plus = bool(OF_lst[-1][2]>OF_lst[-2][2]) * 1.
         D_delta_min = bool(OF_lst[-1][2]<OF_lst[-2][2]) * 1.
 ####        
-        ref_div_node = bool(np.random.uniform()>=(1-prob_ref_div))
+        ref_div_node_plus = bool(np.random.uniform()>=(1-prob_ref_div[0]))
 ####
 
+        ref_wx_node_min = bool(np.random.uniform()>=(1-prob_ref_wx[1]))
         wx_plus = bool(OF_lst[-1][0]>0.) * 1.
         wx_min = bool(OF_lst[-1][0]<0.) * 1.
 
         wx_delta_plus = bool(OF_lst[-1][0]>OF_lst[-2][0]) * 1.
         wx_delta_min = bool(OF_lst[-1][0]<OF_lst[-2][0]) * 1.
 ####        
-        ref_wx_node = bool(np.random.uniform()>=(1-prob_ref_wx))
+        ref_wx_node_plus = bool(np.random.uniform()>=(1-prob_ref_wx[0]))
+
+
+        ref_wy_node_min = bool(np.random.uniform()>=(1-prob_ref_wy[1]))
+        wy_plus = bool(OF_lst[-1][1]>0.) * 1.
+        wy_min = bool(OF_lst[-1][1]<0.) * 1.
+
+        wy_delta_plus = bool(OF_lst[-1][1]>OF_lst[-2][1]) * 1.
+        wy_delta_min = bool(OF_lst[-1][1]<OF_lst[-2][1]) * 1.
+####        
+        ref_wy_node_plus = bool(np.random.uniform()>=(1-prob_ref_wy[0]))
 ####
 
-        x = torch.tensor([D_plus, D_min, D_delta_plus, D_delta_min, ref_div_node, wx_plus, wx_min, wx_delta_plus, wx_delta_min, ref_wx_node])
+        x = torch.tensor([ref_div_node_min, D_plus, D_min, D_delta_plus, D_delta_min, ref_div_node_plus, ref_wx_node_min, wx_plus, wx_min, wx_delta_plus, wx_delta_min, ref_wx_node_plus, ref_wy_node_min, wy_plus, wy_min, wy_delta_plus, wy_delta_min, ref_wy_node_plus])
 
         return x
     def spike_decoder(self, spike_array):
@@ -73,32 +84,41 @@ class objective:
 
         thrust = spike_array[0] - spike_array[1]
         pitch = spike_array[2] - spike_array[3]
+        roll = spike_array[4] - spike_array[5]
 
-        return (thrust, pitch)
-    def objective_function_NEAT(self, model, ref_div, ref_wx):  # add prob here
+        return (thrust, pitch,  roll)
+
+    def objective_function_NEAT(self, model, ref_x, ref_y, ref_z):  # add prob here
 
         steps=100000
         
         mav_model = model
         # self.environment.ref_div = prob_ref*2
-        self.environment.ref_div = ref_div
-        self.environment.ref_wx = ref_wx
-        prob_ref_div = self.environment.ref_div/2.
-        prob_ref_wx = self.environment.ref_wx/2.
+        self.environment.ref_x = ref_x
+        self.environment.ref_y = ref_y
+        self.environment.ref_z = ref_z
+        # prob_ref_div = self.environment.ref_div/2.
+        # prob_ref_wx = self.environment.ref_wx/2.
+        # prob_ref_wy = self.environment.ref_wy/2.
 
         self.environment.reset()
         divs_lst = []
         ref_lst = []
 
+        self.environment.calc_time_to_point()
+
         reward_cum = 0
         for step in range(steps):
-            encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
+            self.environment.calc_prob_encoding_z()
+            self.environment.calc_prob_encoding_x()
+            self.environment.calc_prob_encoding_y()
+
+            encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], self.environment.encoding_z, self.environment.encoding_x, self.environment.encoding_y)
 
 
-            
             array = mav_model(encoded_input.float()) 
             control_input = self.spike_decoder(array.detach().numpy())
-            divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
+            divs, done, _ = self.environment.step(np.asarray([control_input[2], control_input[1], control_input[0]]))
             if done:
                 break
             divs_lst.append(self.environment.state[2][0])
@@ -111,7 +131,7 @@ class objective:
         # print(reward_cum, self.environment.state[0], )
         return reward_cum
     
-    def objective_function_CMAES(self, x, ref_div, ref_wx, genome):  # add prob here
+    def objective_function_CMAES(self, x, ref_x, ref_y, ref_z, genome):  # add prob here
         # for i in [1.0, 1.5]:
         # ref_div = i
         steps=100000
@@ -131,24 +151,30 @@ class objective:
         # mav_model = build_model(x, self.model)
 
         # self.environment.ref_div = prob_ref*2
-        self.environment.ref_div = ref_div
-        self.environment.ref_wx = ref_wx
-        prob_ref_div = self.environment.ref_div/2.
-        prob_ref_wx = self.environment.ref_wx/2.
+        self.environment.ref_x = ref_x
+        self.environment.ref_y = ref_y
+        self.environment.ref_z = ref_z
+        # prob_ref_div = self.environment.calc_prob_encoding(ref_x)
+        # prob_ref_wx = self.environment.ref_wx/2.
+        # prob_ref_wy = self.environment.ref_wy/2.
 
         self.environment.reset()
         divs_lst = []
         ref_lst = []
         # print(mav_model.state_dict())
-
+        self.environment.calc_time_to_point()
         reward_cum = 0
         for step in range(steps):
-            encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
+            self.environment.calc_prob_encoding_z()
+            self.environment.calc_prob_encoding_x()
+            self.environment.calc_prob_encoding_y()
+
+            encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], self.environment.encoding_z, self.environment.encoding_x, self.environment.encoding_y)
             array = mav_model(encoded_input.float()) 
             # print('b',array)
             control_input = self.spike_decoder(array.detach().numpy())
             # print('a', encoded_input, control_input)           
-            divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
+            divs, done, _  = self.environment.step(np.asarray([control_input[2], control_input[1], control_input[0]]))
 
             if done:
                 break
@@ -176,7 +202,7 @@ class objective:
         # print(reward_cum, self.environment.state[2])
         return reward_cum
 
-    def objective_function_CMAES_single(self, x, genome, ref_div=1., ref_wx=1.):  # add prob here
+    def objective_function_CMAES_single(self, x, genome, ref_x=1., ref_y=1., ref_z=3.5):  # add prob here
         steps=100000
         tags = list({x[0]: x[1].weight for x in genome.genes.items()}.keys())
         weights = list(x)
@@ -187,18 +213,26 @@ class objective:
 
         mav_model = place_weights(genome.neuron_matrix, genome)
 
-        self.environment.ref_div = ref_div
-        self.environment.ref_wx = ref_wx
-        prob_ref_div = self.environment.ref_div/2.
-        prob_ref_wx = self.environment.ref_wx/2.
+        self.environment.ref_x = ref_x
+        self.environment.ref_y = ref_y
+        self.environment.ref_z = ref_z
+        # prob_ref_div = self.environment.calc_prob_encoding(ref_x)
+        # prob_ref_wx = self.environment.ref_wx/2.
+        # prob_ref_wy = self.environment.ref_wy/2.
 
         self.environment.reset()
         reward_cum = 0
+
+        self.environment.calc_time_to_point()
         for step in range(steps):
-            encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
+            self.environment.calc_prob_encoding_z()
+            self.environment.calc_prob_encoding_x()
+            self.environment.calc_prob_encoding_y()
+
+            encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], self.environment.encoding_z, self.environment.encoding_x, self.environment.encoding_y)
             array = mav_model(encoded_input.float()) 
             control_input = self.spike_decoder(array.detach().numpy())
-            divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
+            divs, done, _ = self.environment.step(np.asarray([control_input[2], control_input[1], control_input[0]]))
             if done:
                 break
 
@@ -243,7 +277,7 @@ def find_all_routes(genome):
         
     # maybe change 10 in the future
     # neuron_matrix = np.full((list(genome.neurons.keys())[-1], len(longest_routes[0])), 0, dtype=object)
-    neuron_matrix = np.full((1000, len(longest_routes[0])), 0, dtype=object)
+    neuron_matrix = np.full((10000, len(longest_routes[0])), 0, dtype=object)
     # neuron_matrix = np.zeros((100, len(longest_routes[0])))
     neuron_matrix[0:len(input_neurons_lst), 0] = np.asanyarray(input_neurons_lst).T
     neuron_matrix[0:len(output_neurons_lst), -1] = np.asanyarray(output_neurons_lst).T
@@ -263,11 +297,13 @@ def find_all_routes(genome):
     gene_logbook = {}
     gene_logbook_cycle = {}
 
-    row_hidden_nodes = max((neuron_matrix==0).argmax(axis=0))+10
+    row_hidden_nodes = max((neuron_matrix==0).argmax(axis=0))+100
     # a full cycle must be complete in where the dictionary has not changed before picking one
     cycle_condition = True
+    # print(neuron_matrix)
     while cycle_condition:
         hidden_neurons_start = hidden_neurons
+        # print(hidden_neurons_start)
         # gene_logbook_cycle = gene_logbook
         # print('herkenbaar', hidden_neurons)
         for neuron in hidden_neurons_start:
@@ -283,6 +319,7 @@ def find_all_routes(genome):
                     # print(location)
                     if location[0].size!=0: # check if this is valid.
                         possible_locations = list(np.arange(1,location[1][0]))
+                        # print('aa', gene[1], possible_locations)
                         gene_logbook[neuron].append(possible_locations)
                     else:
                         # if neuron in gene_logbook.keys():
@@ -290,34 +327,43 @@ def find_all_routes(genome):
                         #     possible_locations = list(relative_positions)
                         if gene[1] in gene_logbook.keys():
                             # print('did get here though0')
-                            relative_positions = np.asarray(gene_logbook[gene[1]]) - 1
-                            # print(relative_positions)
-                            possible_locations = list(relative_positions)
+                            # relative_positions = np.asarray(gene_logbook[gene[1]]) - 1 #original
+                            # print(gene_logbook[gene[1]][-1])
+                            relative_positions = list(np.arange(1,gene_logbook[gene[1]][-1]))
+                            # print('a', gene[1],relative_positions)
+                            possible_locations = relative_positions
                             gene_logbook[neuron].append(possible_locations)
                 elif gene[1] == neuron:
                     location = np.where(neuron_matrix == gene[0])
                     if location[0].size!=0:
                         possible_locations = list(np.arange(location[1][0]+1,neuron_matrix.shape[1]-1))
+                        # print('bb', gene[0], possible_locations)
                         gene_logbook[neuron].append(possible_locations)
                     else:
                         # if neuron in gene_logbook.keys():
                         #     relative_positions = np.asarray(gene_logbook[neuron]) + 1
                         #     possible_locations = list(relative_positions)
                         if gene[0] in gene_logbook.keys():
-                            # print('did get here though1')
-                            relative_positions = np.asarray(gene_logbook[gene[0]]) + 1
-                            # print(relative_positions)
-                            possible_locations = list(relative_positions)
+                            # print((np.asarray(gene_logbook[gene[0]])+1)[0],neuron_matrix.shape[1]-1)
+                            # relative_positions = np.asarray(gene_logbook[gene[0]]) + 1 # original
+                            relative_positions = list((np.arange((np.asarray(gene_logbook[gene[0]])+1)[0],neuron_matrix.shape[1]-1)))
+                            # print('b', gene[0], relative_positions)
+                            possible_locations = relative_positions
                             gene_logbook[neuron].append(possible_locations)
 
             # print('b', gene_logbook)
+            # print(gene_logbook)
             len_constraints = (len(gene_logbook[neuron])-1)
             gene_logbook[neuron] = [x for xs in gene_logbook[neuron] for x in xs]
 
             # print('b', gene_logbook)
+            #als maar 1 kant constraints heeft, toch toevoegen, die van de andere kant is niet duidelijk
+
+
             counts = Counter(gene_logbook[neuron])
             dupids = [x for x in gene_logbook[neuron] if counts[x] > len_constraints ]
-            gene_logbook[neuron] = list(set(dupids))
+            # print('zzzzzzzz', list(set(dupids)), sorted(list(set(dupids))))
+            gene_logbook[neuron] = sorted(list(set(dupids)))
             # print('a', dupids)
 
             if len(gene_logbook[neuron])==1:
@@ -333,15 +379,17 @@ def find_all_routes(genome):
         else:
             gene_logbook_cycle = copy.deepcopy(gene_logbook)
    
-
+    # print(neuron_matrix, gene_logbook, hidden_neurons)
     if hidden_neurons:
         for neuron in hidden_neurons:
             # print(gene_logbook[neuron][0], neuron, row_hidden_nodes)
             try:
+                # print(neuron, gene_logbook[neuron])
                 neuron_matrix[row_hidden_nodes, gene_logbook[neuron][0]] = neuron
                 
                 row_hidden_nodes += 1
             except IndexError:
+                print(neuron)
                 pass
     # neuron_matrix = clean_array(neuron_matrix)
     network_neurons = [x.id for x in genome.neurons.values()]
@@ -356,6 +404,7 @@ def find_all_routes(genome):
     network_genes = [[x.input_neuron.id, x.output_neuron.id] if x.enabled==True else None for x in genome.genes.values()]
     network_genes = [x for x in network_genes if x is not None]
     for gene in network_genes:
+        # print(neuron_matrix, gene[1], np.where(neuron_matrix==gene[1]))
         left_pos = np.where(neuron_matrix==gene[0])[1][0]
         right_pos = np.where(neuron_matrix==gene[1])[1][0]
         difference = right_pos - left_pos
@@ -409,7 +458,7 @@ def place_weights(neuron_matrix, genome):
     # list(mydict.keys())[list(mydict.values()).index(16)]
 
     # print(list(gene_dct.keys()))
-    model = SNN(neurons_lst[:-1], 4)
+    model = SNN(neurons_lst[:-1], 6)
     # create function in model to return the name of the layers!
     # neuron's already passed :
     # all input neurons oi
@@ -526,9 +575,9 @@ class Species(object):
         self.best_genome = 0
         
 
-    def run_generation(self, cycle, div_training, wx_training):
+    def run_generation(self, cycle, ref_x, ref_y, ref_z):
         if self.active: #this should always be true unless species are allowed to die
-            species_fitness = self.generate_fitness(cycle, div_training, wx_training)
+            species_fitness = self.generate_fitness(cycle, ref_x, ref_y, ref_z)
             # I don't particularly like this +1 fix... as it will skew populations
             avg_species_fitness = float(species_fitness)/float(self.species_population)
             self.culling(avg_species_fitness)
@@ -564,7 +613,7 @@ class Species(object):
 
     #     return species_score
 
-    def generate_fitness(self, cycle, div_training, wx_training):
+    def generate_fitness(self, cycle, ref_x, ref_y, ref_z):
         species_score = 0
         genome_scores = {}
         for genome_id, genome in self.genomes.items():
@@ -580,14 +629,14 @@ class Species(object):
 
             
             # # CMA-ES learning 
-            cycles = 10 + int(len(self.genomes[genome_id].hidden_neurons))
+            cycles = 12 + int(len(self.genomes[genome_id].hidden_neurons))
             tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
             weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
 
             # print('aii', weights)
             # for cycle in range(cycles):  
             cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
-            new_weights, best_fitness = cma_es_class.optimize_run(cycles, div_training, wx_training, self.genomes[genome_id])
+            new_weights, best_fitness = cma_es_class.optimize_run(cycles, ref_x, ref_y, ref_z, self.genomes[genome_id])
             
             # print('aai', new_weights)
 
@@ -604,8 +653,8 @@ class Species(object):
             # objective_genome = objective(environment)
                       
             reward = 0
-            for i in range(len(div_training)):
-                add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])  + objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i])
+            for i in range(len(ref_x)):
+                add = objective_genome.objective_function_NEAT(model, ref_x[i], ref_y[i], ref_z[i])  + objective_genome.objective_function_NEAT(model, ref_x[i], ref_y[i], ref_z[i])
                 reward = reward + add/2.
                 # print(div_training[i], wx_training[i], add)
             # reward = reward/float(len(div_training))
@@ -733,7 +782,7 @@ class Species(object):
                 weights = np.asarray(list({x[0]: x[1].weight for x in temp_genome.genes.items()}.values()))
 
                 cma_es_class  = CMA_ES_single(objective_genome.objective_function_CMAES_single, N=weights.shape[0], xmean=weights, genome=temp_genome)
-                new_weights, best_fitness, condition = cma_es_class.optimize_run(5, 1., 1., temp_genome)
+                new_weights, best_fitness, condition = cma_es_class.optimize_run(5, temp_genome)
                 if condition:
                     learning_condition = True
                     print('passed test', genome_id)
@@ -746,6 +795,60 @@ class Species(object):
 
         self.genomes = genomes
         
+    def create_random_network(self, genome_id, hidden_neurons, hidden_layers):
+        temp_genome = self.genomes[genome_id].clone()
+        learning_condition = False
+            
+        while not learning_condition:
+            temp_genome_layers = temp_genome.clone()
+            while len(temp_genome.hidden_neurons)<hidden_neurons: 
+                try:
+                    temp_genome_layers.mutate_hidden_layers_condition()
+                    neuron_matrix = find_all_routes(temp_genome_layers)
+                    neuron_matrix = clean_array(neuron_matrix)
+                    # print(neuron_matrix.shape, neuron_matrix)
+                    temp_genome_layers.neuron_matrix = neuron_matrix
+                except Exception as e:
+                    temp_genome_layers = temp_genome.clone()
+                    print('gonewrongyo')
+                if hidden_layers >neuron_matrix.shape[1]:
+                    temp_genome = temp_genome_layers.clone()
+                else:
+                    temp_genome_layers = temp_genome.clone()
+                    
+                    
+
+
+            try:
+                neuron_matrix = find_all_routes(temp_genome)
+                neuron_matrix = clean_array(neuron_matrix)
+                print(neuron_matrix.shape)
+                temp_genome.neuron_matrix = neuron_matrix
+
+                environment = Quadhover()
+                objective_genome = objective(environment)
+
+                cycles = 5
+                weights = np.asarray(list({x[0]: x[1].weight for x in temp_genome.genes.items()}.values()))
+
+                cma_es_class  = CMA_ES_single(objective_genome.objective_function_CMAES_single, N=weights.shape[0], xmean=weights, genome=temp_genome)
+                new_weights, best_fitness, condition = cma_es_class.optimize_run(5, temp_genome)
+                if condition:
+
+                    learning_condition = True
+                    print('passed test', genome_id)
+                else:
+                    temp_genome = self.genomes[genome_id].clone()
+            except Exception as e:
+                    temp_genome = self.genomes[genome_id].clone()
+        
+
+        self.genomes[genome_id] = temp_genome.clone()
+
+
+
+        # network is too big!!!!!!!
+        # if neuron matrix more than blabla rows, don't add neuron
 
     def crossover(self, random_genome, random_genome_mate):
         if random_genome.fitness > random_genome_mate.fitness:
@@ -789,7 +892,7 @@ class Species(object):
                                     reverse=True)
         print('sorted_network_ids', sorted_network_ids, [x.fitness for x in self.genomes.values()])
         # alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.5))]
-        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.1))]
+        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.15))]
         # dead_network_ids = sorted_network_ids[int(round(float(self.species_population)/2.0)):]
 
         return alive_network_ids

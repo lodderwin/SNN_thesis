@@ -5,205 +5,12 @@ from neuron import Neuron
 from gene import Gene
 import numpy as np
 import config as config
-
-
+from collections import Counter
+import copy
 import networkx as nx
 # from collections import namedtuple
 # import numpy as np
 # from typing import Optional, NamedTuple, Tuple, Any, Sequence
-
-# class SpikeFunction(torch.autograd.Function):
-#     """
-#     Spiking function with rectangular gradient.
-#     Source: https://www.frontiersin.org/articles/10.3389/fnins.2018.00331/full
-#     Implementation: https://github.com/combra-lab/pop-spiking-deep-rl/blob/main/popsan_drl/popsan_td3/popsan.py
-#     """
-
-#     @staticmethod
-#     def forward(ctx, v):
-#         ctx.save_for_backward(v)  # save voltage - thresh for backwards pass
-#         return v.gt(0.0).float()
-
-#     @staticmethod
-#     def backward(ctx, grad_output):
-#         v, = ctx.saved_tensors
-#         grad_input = grad_output.clone()
-#         spike_pseudo_grad = (v.abs() < 0.5).float()  # 0.5 is the width of the rectangle
-#         return grad_input * spike_pseudo_grad, None  # ensure a tuple is returned
-
-# #cant call numpy on tensor thatrequires grad. use tensor.detach().numpy()
-
-# # class SpikeFunction(nn.Module):
-# #     def __init__(self):
-# #         super().__init__()
-# #     def forward(v):
-# #         return v.gt(0.0).float()
-
-
-# # # Placeholder for LIF state
-# LIFState = namedtuple('LIFState', ['z', 'v'])
-
-
-# class LIF(nn.Module):
-#     """
-#     Leaky-integrate-and-fire neuron with learnable parameters.
-#     """
-
-#     def __init__(self, size):
-#         super().__init__()
-#         self.size = size
-#         # Initialize all parameters randomly as U(0, 1)
-#         # self.v_decay = nn.Parameter(torch.rand(size))
-#         self.v_decay = nn.Parameter(torch.FloatTensor(size).uniform_(0.3, 0.85)) #here
-#         # self.thresh = nn.Parameter(torch.rand(size))
-#         self.thresh = nn.Parameter(torch.FloatTensor(size).uniform_(0.7, 0.999))  #here
-#         self.spike = SpikeFunction.apply  # spike function
-
-#     def forward(self, synapse, z, state = None):
-#         # Previous state
-#         if state is None:
-#             state = LIFState(
-#                 z=torch.zeros_like(synapse(z)),
-#                 v=torch.zeros_like(synapse(z)),
-#             )
-#         # Update state
-#         i = synapse(z)
-#         v = state.v * self.v_decay * (1.0 - state.z) + i
-#         z = self.spike(v - self.thresh)
-        
-#         return z, LIFState(z, v)
-
-# ###########
-# class LIFState_no_thresh(NamedTuple):
-#     v: torch.Tensor
-
-# # Placeholder for LIF parameters
-# class LIFParameters_no_tresh(NamedTuple):
-#     v_decay: torch.Tensor = torch.as_tensor(0.75)
-
-
-# class LIF_no_thres(nn.Module):
-#     """
-#     Leaky-integrate-and-fire neuron with learnable parameters.
-#     """
-
-#     def __init__(self, size):
-#         super().__init__()
-#         self.size = size
-#         # Initialize all parameters randomly as U(0, 1)
-#         # self.v_decay = nn.Parameter(torch.rand(size))
-#         self.v_decay = nn.Parameter(torch.FloatTensor(size).uniform_(0.3, 0.4)) #here
-#     def forward(self, synapse, z, state = None):
-#         # Previous state
-#         if state is None:
-#             state = LIFState_no_thresh(
-#                 v=torch.zeros_like(synapse(z)),
-#             )
-#         # Update state
-#         i = synapse(z)
-#         v = -0.8 + (state.v * self.v_decay + i) * 1.3 
-#         return v, LIFState_no_thresh(v)
-
-# class non_SpikingMLP(nn.Module):
-#     """
-#     Spiking network with LIF neuron model.
-#     """
-
-#     def __init__(self, l_1_size, output_size):
-#         super().__init__()
-#         # self.sizes = sizes
-#         # Define layers
-#         self.synapses = nn.ModuleList()
-#         self.neurons = nn.ModuleList()
-#         self.states = []
-#         # Loop over current (accessible with 'size') and next (accessible with 'sizes[i]') element
-#         # for i, size in enumerate(sizes[-1], start=1):
-#             # Parameters of synapses and neurons are randomly initialized
-#         print(output_size)
-#         self.synapses.append(nn.Linear(l_1_size, output_size, bias=False))
-#         self.neurons.append(LIF_no_thres(output_size))
-#         self.states.append(None)
-
-#     def forward(self, z):
-#         for i, (neuron, synapse) in enumerate(zip(self.neurons, self.synapses)):
-#             v, self.states[i]  = neuron(synapse, z, self.states[i])
-#         return v
-
-#     def reset(self):
-#         """
-#         Resetting states when you're done is very important!
-#         """
-#         for i, _ in enumerate(self.states):
-#             self.states[i] = None
-
-
-
-
-# class SpikingMLP(nn.Module):
-#     """
-#     Spiking network with LIF neuron model.
-#     """
-
-#     def __init__(self, sizes):
-#         super().__init__()
-#         self.sizes = sizes
-#         self.spike = SpikeFunction.apply
-
-#         # Define layers
-#         self.synapses = nn.ModuleList()
-#         self.neurons = nn.ModuleList()
-#         self.states = []
-#         # Loop over current (accessible with 'size') and next (accessible with 'sizes[i]') element
-#         for i, size in enumerate(sizes[:-1], start=1):
-#             # Parameters of synapses and neurons are randomly initialized
-#             self.synapses.append(nn.Linear(size, sizes[i], bias=False))
-#             self.neurons.append(LIF(sizes[i]))
-#             self.states.append(None)
-
-#     def forward(self, z):
-#         for i, (neuron, synapse) in enumerate(zip(self.neurons, self.synapses)):
-#             z, self.states[i] = neuron(synapse, z, self.states[i])
-#         return z
-
-#     def reset(self):
-#         """
-#         Resetting states when you're done is very important!
-#         """
-#         for i, _ in enumerate(self.states):
-#             self.states[i] = None
-
-
-# class SNN(nn.Module):
-#     """
-#     Spiking network with LIF neuron model.
-#     Has a linear output layer
-#     """
-#     def __init__(self, snn_sizes, output_size):
-#         super().__init__()
-#         self.snn_sizes = snn_sizes
-#         self.output_size = output_size
-
-#         self.snn = SpikingMLP(snn_sizes)
-#         # self.fc = nn.Linear(snn_sizes[-1], output_size)
-#         # self.tanh = nn.Tanh()
-
-#         self.last_layer = non_SpikingMLP(snn_sizes[-1], output_size)
-
-#     def forward(self, z):
-#         z = self.snn(z)
-        
-#         # z = self.fc(z)
-#         out = self.last_layer(z)
-#         return out
-
-#     def set_weights(self, weights):
-#         self.weights = weights
-
-#     def reset(self):
-#         self.snn.reset()
-#         #last layer reset?
-
-
 
 
 class Network(object):
@@ -275,8 +82,6 @@ class Network(object):
         output_nodes_id = [x.id for x in self.output_neurons]
 
 
-        print(self.edges)
-
         # self.networkx_network = nx.from_edgelist(self.edges)
         self.networkx_network = nx.DiGraph()
         # self.networkx_network.add_edges_from(self.edges)
@@ -292,7 +97,7 @@ class Network(object):
         # network stuff
         # self.flatten = nn.Flatten()
     
-
+        self.sparsity = (self.num_input_neurons+len(self.hidden_neurons))*self.num_output_neurons 
     def clone(self):
         return deepcopy(self)
     # def reset(self):
@@ -390,7 +195,11 @@ class Network(object):
         avg_weight_comp = sum(gene.weight for gene in comparison_genome.genes.values()) / len(comparison_genome.genes)
         return abs(avg_weight_self - avg_weight_comp)
 
+    def calculate_sparsity(self):
 
+        return len(self.genes)/((self.num_input_neurons + len(self.hidden_neurons))*self.num_output_neurons + \
+            (self.num_input_neurons + len(self.hidden_neurons)-1)*(self.num_input_neurons + len(self.hidden_neurons)) / 2.)
+    
     def mutate(self):
         # Genome Weight Mutations
         # for gene in self.genes.values():
@@ -483,9 +292,13 @@ class Network(object):
 
         if np.random.uniform() < config.ADD_NODE_MUTATION:
 
+            
             # Select gene at random and disable
             selected_gene = np.random.choice(list(self.genes.values()))
             
+            #see if too many layers already exist 
+            # density very hard to investigate 
+
             # Avoid adding the same neuron connection by not choosing a di.
             if selected_gene.enabled:
                 selected_gene.disable()
@@ -558,8 +371,290 @@ class Network(object):
         if self.hidden_neurons:
             self.networkx_network.add_nodes_from([x.id for x in self.hidden_neurons])
         self.networkx_network.add_weighted_edges_from(self.edges)
+        self.sparsity = self.calculate_sparsity()
     # def find_node_snake(self, next_nodes):
 
+
+    def mutate_hidden_layers_condition(self):
+        
+
+        for neuron in self.neurons.values():
+            neuron.mutate_decay()
+            neuron.mutate_threshold()
+
+
+        if np.random.uniform() < config.ADD_GENE_MUTATION:
+
+            gene_added = False
+            while not gene_added:
+
+                # No valid genes exist to be added. Pay attention
+                if (len(self.hidden_neurons) == 0):
+                    break
+
+                # Certain genes are not valid, such as any gene going to an input node, or any gene from an output node
+                selected_input_node = np.random.choice(list(set().union(self.hidden_neurons, self.input_neurons)))
+                selected_output_node = np.random.choice(list(set().union(self.hidden_neurons, self.output_neurons)))
+
+                gene_valid = True
+                for gene in self.genes.values():
+                    # If this connection already exists, do not make the new gene
+                    if (gene.input_neuron.id == selected_input_node.id and
+                        gene.output_neuron.id == selected_output_node.id):
+                        gene_valid = False
+                        # break
+
+                # Can't have loops. Can't connect to itself. Gene must connect node from backwards to forwards. changed sign >=
+                if (selected_input_node.id == selected_output_node.id):
+                    gene_valid = False
+
+#
+                #can't be recurrent
+                if nx.has_path(self.networkx_network, selected_output_node.id, selected_input_node.id):
+                    gene_valid = False
+
+                if gene_valid:
+                    new_gene = Gene(self.innovation.get_new_innovation_number(),
+                                    selected_input_node,
+                                    selected_output_node)
+
+                    self.networkx_network.add_edge(selected_input_node.id, selected_output_node.id, weight=-1.)
+                    self.genes[new_gene.innovation_number] = new_gene
+                    self.networkx_network = nx.DiGraph()
+                    # self.networkx_network.add_edges_from(self.edges)
+                    self.edges = [(x.input_neuron.id, x.output_neuron.id, 1.) if x.enabled else None for x in list(self.genes.values())]
+                    self.edges = [x for x in self.edges if x is not None]
+                    input_node_ids = [x.id for x in self.input_neurons]
+                    output_node_ids = [x.id for x in self.output_neurons]
+                    self.networkx_network.add_nodes_from(input_node_ids)
+                    self.networkx_network.add_nodes_from(output_node_ids)
+                    if self.hidden_neurons:
+                        self.networkx_network.add_nodes_from([x.id for x in self.hidden_neurons])
+                    self.networkx_network.add_weighted_edges_from(self.edges)
+                    self.sparsity = self.calculate_sparsity()
+                    gene_added = True
+        
+        
+
+        if np.random.uniform() < config.ADD_NODE_MUTATION:
+
+            
+            # Select gene at random and disable
+            selected_gene = np.random.choice(list(self.genes.values()))
+            
+        
+            if selected_gene.enabled:
+                selected_gene.disable()
+
+                 # Create new node, rearrange ids to make higher neuron ids farther towards output layer
+                # new_neuron = Neuron(selected_gene.output_neuron.id)
+                # self.neurons[selected_gene.output_neuron.id] = new_neuron
+                # selected_gene.output_neuron.set_id(self.get_next_neuron_id())
+                # self.neurons[selected_gene.output_neuron.id] = selected_gene.output_neuron
+
+
+                new_neuron = Neuron(selected_gene.output_neuron.id)
+
+                # newly added for position
+                # print('goo', self.neurons[selected_gene.input_neuron.id].x_position, self.neurons[selected_gene.output_neuron.id].x_position)
+                new_neuron.x_position = self.neurons[selected_gene.input_neuron.id].x_position + (self.neurons[selected_gene.output_neuron.id].x_position - self.neurons[selected_gene.input_neuron.id].x_position)/2.
+                new_neuron.y_position = self.neurons[selected_gene.input_neuron.id].y_position + (self.neurons[selected_gene.output_neuron.id].y_position - self.neurons[selected_gene.input_neuron.id].y_position)/2.
+                
+                
+                # self.neurons[selected_gene.output_neuron.id] = selected_gene.output_neuron
+                selected_gene.output_neuron.set_id(self.get_next_neuron_id())
+                self.neurons[selected_gene.output_neuron.id] = new_neuron
+
+                
+
+                # Create new genes
+                new_input_gene = Gene(self.innovation.get_new_innovation_number(),
+                                    selected_gene.input_neuron,
+                                    new_neuron,
+                                    1)
+                self.networkx_network.add_edge(selected_gene.input_neuron.id, new_neuron.id, weight=-1.)
+
+                new_output_gene = Gene(self.innovation.get_new_innovation_number(),
+                                    new_neuron,
+                                    selected_gene.output_neuron,
+                                    selected_gene.weight)
+                self.networkx_network.add_edge(new_neuron.id, selected_gene.output_neuron.id, weight=-1.)
+                # Add to network
+                self.genes[new_input_gene.innovation_number] = new_input_gene
+                self.genes[new_output_gene.innovation_number] = new_output_gene
+                self.hidden_neurons.append(new_neuron)
+
+
+                self.networkx_network = nx.DiGraph()
+                # self.networkx_network.add_edges_from(self.edges)
+                self.edges = [(x.input_neuron.id, x.output_neuron.id, 1.) if x.enabled else None for x in list(self.genes.values())]
+                self.edges = [x for x in self.edges if x is not None]
+                input_node_ids = [x.id for x in self.input_neurons]
+                output_node_ids = [x.id for x in self.output_neurons]
+                self.networkx_network.add_nodes_from(input_node_ids)
+                self.networkx_network.add_nodes_from(output_node_ids)
+                if self.hidden_neurons:
+                    self.networkx_network.add_nodes_from([x.id for x in self.hidden_neurons])
+                self.networkx_network.add_weighted_edges_from(self.edges)
+                self.sparsity = self.calculate_sparsity()
+    # def find_node_snake(self, next_nodes):
+    # def find_all_routes(self):
+        
+    #     input_neurons_lst = [x.id for x in self.input_neurons]
+    #     output_neurons_lst = [x.id for x in self.output_neurons]
+
+    #     all_routes_lst = []
+    #     for input_neuron in input_neurons_lst:
+    #         for output_neuron in output_neurons_lst:
+    #             # try:
+    #             paths = list(nx.all_simple_paths(self.networkx_network, input_neuron, output_neuron))
+    #             #neuron.id already extracted
+    #             # paths = find_all_paths(genome.networkx_network, input_neuron, output_neuron)
+    #             all_routes_lst.extend(paths)
+                
+    #             # except nx.NodeNotFound:
+    #                 # print("not found, working though")
+
+    #     longest_route = max(all_routes_lst, key=len)
+    #     all_routes_lst.remove(longest_route)
+
+    #     longest_routes = []
+    #     longest_routes.append(longest_route)
+    #     #see if multiple lists are of the same length
+    #     if all_routes_lst:
+    #         next_longest_route = max(all_routes_lst, key=len)
+    #         while len(longest_routes[0])==len(next_longest_route):
+    #             longest_routes.append(next_longest_route)
+    #             # print(all_routes_lst)
+    #             all_routes_lst.remove(next_longest_route)
+    #             if all_routes_lst:
+    #                 next_longest_route = max(all_routes_lst, key=len)
+    #             else: 
+    #                 break
+    #     # print(longest_routes)
+            
+    #     # maybe change 10 in the future
+    #     # neuron_matrix = np.full((list(genome.neurons.keys())[-1], len(longest_routes[0])), 0, dtype=object)
+    #     neuron_matrix = np.full((10000, len(longest_routes[0])), 0, dtype=object)
+    #     # neuron_matrix = np.zeros((100, len(longest_routes[0])))
+    #     neuron_matrix[0:len(input_neurons_lst), 0] = np.asanyarray(input_neurons_lst).T
+    #     neuron_matrix[0:len(output_neurons_lst), -1] = np.asanyarray(output_neurons_lst).T
+    #     for i in range(len(longest_routes)):
+    #         neuron_matrix[0+i,1:-1] = np.asanyarray(longest_routes[i][1:-1])
+    #     # print('here the matrix', neuron_matrix)
+    #     neurons_placed = list(np.unique(neuron_matrix))
+
+    #     hidden_neurons = [x.id for x in self.hidden_neurons]
+    #     hidden_neurons = [x for x in hidden_neurons if x not in neurons_placed]
+    #     # print(hidden_neurons)
+
+    #     genes = [[x.input_neuron.id, x.output_neuron.id] if x.enabled==True else None for x in self.genes.values()]
+    #     genes = [x for x in genes if x is not None]
+
+    #     gene_logbook = {}
+    #     gene_logbook_cycle = {}
+
+    #     row_hidden_nodes = max((neuron_matrix==0).argmax(axis=0))+10
+    #     # a full cycle must be complete in where the dictionary has not changed before picking one
+    #     cycle_condition = True
+    #     while cycle_condition:
+    #         hidden_neurons_start = hidden_neurons
+    #         # gene_logbook_cycle = gene_logbook
+    #         # print('herkenbaar', hidden_neurons)
+    #         for neuron in hidden_neurons_start:
+    #             # if neuron not in gene_logbook.keys():
+    #             gene_logbook[neuron] = []
+    #             list_genes_with_neuron = [x for x in genes if neuron in x]
+
+    #             # print(list_genes_with_neuron)
+    #             for gene in list_genes_with_neuron:
+    #                 # print('genelogbook', gene_logbook)
+    #                 if gene[0] == neuron:
+    #                     location = np.where(neuron_matrix==gene[1])
+    #                     # print(location)
+    #                     if location[0].size!=0: # check if this is valid.
+    #                         possible_locations = list(np.arange(1,location[1][0]))
+    #                         gene_logbook[neuron].append(possible_locations)
+    #                     else:
+    #                         # if neuron in gene_logbook.keys():
+    #                         #     relative_positions = np.asarray(gene_logbook[neuron]) - 1
+    #                         #     possible_locations = list(relative_positions)
+    #                         if gene[1] in gene_logbook.keys():
+    #                             # print('did get here though0')
+    #                             relative_positions = np.asarray(gene_logbook[gene[1]]) - 1
+    #                             # print(relative_positions)
+    #                             possible_locations = list(relative_positions)
+    #                             gene_logbook[neuron].append(possible_locations)
+    #                 elif gene[1] == neuron:
+    #                     location = np.where(neuron_matrix == gene[0])
+    #                     if location[0].size!=0:
+    #                         possible_locations = list(np.arange(location[1][0]+1,neuron_matrix.shape[1]-1))
+    #                         gene_logbook[neuron].append(possible_locations)
+    #                     else:
+    #                         # if neuron in gene_logbook.keys():
+    #                         #     relative_positions = np.asarray(gene_logbook[neuron]) + 1
+    #                         #     possible_locations = list(relative_positions)
+    #                         if gene[0] in gene_logbook.keys():
+    #                             # print('did get here though1')
+    #                             relative_positions = np.asarray(gene_logbook[gene[0]]) + 1
+    #                             # print(relative_positions)
+    #                             possible_locations = list(relative_positions)
+    #                             gene_logbook[neuron].append(possible_locations)
+
+    #             # print('b', gene_logbook)
+    #             len_constraints = (len(gene_logbook[neuron])-1)
+    #             gene_logbook[neuron] = [x for xs in gene_logbook[neuron] for x in xs]
+
+    #             # print('b', gene_logbook)
+    #             counts = Counter(gene_logbook[neuron])
+    #             dupids = [x for x in gene_logbook[neuron] if counts[x] > len_constraints ]
+    #             gene_logbook[neuron] = list(set(dupids))
+    #             # print('a', dupids)
+
+    #             if len(gene_logbook[neuron])==1:
+    #                 neuron_matrix[row_hidden_nodes, gene_logbook[neuron][0]] = neuron
+    #                 row_hidden_nodes += 1
+    #                 hidden_neurons.remove(neuron)
+    #                 # If you del the bloody key, it is also taken out of the copy one, in this case gene_logbook_cycle
+    #                 # del gene_logbook[neuron]
+    #             # print(gene_logbook_cycle.values(), gene_logbook.values())
+    #         if list(gene_logbook_cycle.values()) == list(gene_logbook.values()): 
+    #             cycle_condition = False
+    #             # print('it works')
+    #         else:
+    #             gene_logbook_cycle = copy.deepcopy(gene_logbook)
+    
+
+    #     if hidden_neurons:
+    #         for neuron in hidden_neurons:
+    #             # print(gene_logbook[neuron][0], neuron, row_hidden_nodes)
+    #             try:
+    #                 neuron_matrix[row_hidden_nodes, gene_logbook[neuron][0]] = neuron
+                    
+    #                 row_hidden_nodes += 1
+    #             except IndexError:
+    #                 pass
+    #     network_neurons = [x.id for x in self.neurons.values()]
+
+    #     matrix_neurons = list(np.unique(neuron_matrix))
+
+    #     if not all(elem in network_neurons  for elem in matrix_neurons[1:]):
+    #         print('no luck oi')
+
+    #     network_genes = [[x.input_neuron.id, x.output_neuron.id] if x.enabled==True else None for x in self.genes.values()]
+    #     network_genes = [x for x in network_genes if x is not None]
+    #     for gene in network_genes:
+    #         left_pos = np.where(neuron_matrix==gene[0])[1][0]
+    #         right_pos = np.where(neuron_matrix==gene[1])[1][0]
+    #         difference = right_pos - left_pos
+    #         if difference == 1:
+    #             continue
+    #         else: 
+    #             # neuron matrix left_pos + 1 in matrix == gene[0]
+    #             # original: eft_pos+1:left_pos+1+difference
+    #             neuron_matrix[row_hidden_nodes, left_pos+1:left_pos+difference] = np.full((1, difference-1), gene[0])
+    #             row_hidden_nodes += 1
+    #     return neuron_matrix
 
 
 

@@ -211,7 +211,7 @@ class objective:
         reward_cum = self.environment.reward
         return reward_cum
 
-with open('testing_decreasedCMAES.pkl', 'rb') as f:
+with open('testing_decreasedCMAES_2D.pkl', 'rb') as f:
     neat_class = dill.load(f)
 
 # neat_class.species[neat_class.best_species].genomes[neat_class.best_genome]
@@ -221,7 +221,7 @@ model = place_weights(neuron_matrix, neat_class.best_genome)
 network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
 objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 1., 1., 1)
+objective.objective_function_multiple(model, 0.3, 0.3, 10)
 # objective.objective_function_single(model, 1., 1.)
 print(model.state_dict())
 print(neat_class.best_genome.fitness, neat_class.best_genome)

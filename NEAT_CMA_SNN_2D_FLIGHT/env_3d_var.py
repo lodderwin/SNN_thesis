@@ -35,7 +35,7 @@ class LandingEnv3D:
         state_0=[0, 0, 5, 0, 0, 0, 0, 0, 0, G],
         h_blind=6.,
         gains=[6, 6, 3.0],
-        dt=0.02,
+        dt=0.005,
         seed=None,
         # act_high=[1 * np.pi] * 2 + [0.4 * G],  #why?
         act_high=[1 * 0.785] * 2 + [0.4 * G],  #why?

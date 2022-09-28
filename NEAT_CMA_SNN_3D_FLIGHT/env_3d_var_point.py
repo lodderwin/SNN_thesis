@@ -36,7 +36,7 @@ class LandingEnv3D:
         state_0=[0, 0, 2.5, 0, 0, 0, 0, 0, 0, G],
         h_blind=6.,
         gains=[6, 6, 3.0],
-        dt=0.02,
+        dt=0.005,
         seed=None,
         # act_high=[1 * np.pi] * 2 + [0.4 * G],  #why?
         act_high=[1 * 0.785] * 2 + [0.4 * G],  #why?
@@ -85,7 +85,7 @@ class LandingEnv3D:
         # fly square with alternating height. if within 1 m, get new coordinates
 
         #TODO: create probability function
-        self.update_rate_position = 0.25 #--> changes probability nodes
+        self.update_rate_position = 0.005 #--> changes probability nodes
         # probability_nodes x distance, y probability
 
         self.encoding_x = [0.5, 0.5]
@@ -103,43 +103,35 @@ class LandingEnv3D:
         self.h_blind = h_blind
 
     def calc_prob_encoding_x(self):
-        if self.t % 0.25 != 0.:
-            None
-        else:
-            setpoint_x = self.state[0][0] - self.ref_x
-            if setpoint_x>0.:
-                prob = np.exp(-1./((setpoint_x)/2))/2. + 0.5
-                self.encoding_x = [1.-prob, prob]
-            elif setpoint_x<0.:
-                prob = np.exp(1./((1*setpoint_x)/2))/2. + 0.5
-                self.encoding_x = [prob, 1.-prob]
+        
+        setpoint_x = self.state[0][0] - self.ref_x
+        if setpoint_x>0.:
+            prob = np.exp(-1./((setpoint_x)/2))/2. + 0.5
+            self.encoding_x = [1.-prob, prob]
+        elif setpoint_x<0.:
+            prob = np.exp(1./((1*setpoint_x)/2))/2. + 0.5
+            self.encoding_x = [prob, 1.-prob]
 
     def calc_prob_encoding_y(self):
-        if self.t % 0.25 != 0.:
-            None
-        else:
-            setpoint_y = self.state[1][0] - self.ref_y
-            if setpoint_y>0.:
-                prob = np.exp(-1./((setpoint_y)/2))/2. + 0.5
-                self.encoding_y = [1.-prob, prob]
-            elif setpoint_y<0.:
-                prob = np.exp(1./((1*setpoint_y)/2))/2. + 0.5
-                self.encoding_y = [prob, 1.-prob]
+
+        setpoint_y = self.state[1][0] - self.ref_y
+        if setpoint_y>0.:
+            prob = np.exp(-1./((setpoint_y)/2))/2. + 0.5
+            self.encoding_y = [1.-prob, prob]
+        elif setpoint_y<0.:
+            prob = np.exp(1./((1*setpoint_y)/2))/2. + 0.5
+            self.encoding_y = [prob, 1.-prob]
 
     def calc_prob_encoding_z(self):
-        if self.t % 0.25 != 0.:
-            None
-        else:
-            setpoint_z = self.state[2][0] - self.ref_z
-            if setpoint_z>0.:
-                prob = np.exp(-1./((setpoint_z)/2))/2. + 0.5
-                self.encoding_z = [1.-prob, prob]
-            elif setpoint_z<0.:
-                prob = np.exp(1./((1*setpoint_z)/2))/2. + 0.5
-                self.encoding_z = [prob, 1.-prob]
+        setpoint_z = self.state[2][0] - self.ref_z
+        if setpoint_z>0.:
+            prob = np.exp(-1./((setpoint_z)/2))/2. + 0.5
+            self.encoding_z = [1.-prob, prob]
+        elif setpoint_z<0.:
+            prob = np.exp(1./((1*setpoint_z)/2))/2. + 0.5
+            self.encoding_z = [prob, 1.-prob]
 
     def calc_time_to_point(self):
-        
         self._param["time bound"] =  np.sqrt( np.sqrt(self.ref_x**2 + self.ref_y**2 + np.abs(self.ref_z-2.5)**2) )*4
         # print(self.param["time bound"])
 
@@ -315,9 +307,12 @@ class LandingEnv3D:
         # height_reward = ((np.abs(self.state[2][0] - self.height_reward))**1)*self.t   #        *self.param["dt"]
         # forward_reward =((np.abs(self.state[0][0] - self.forward_reward))**1)*self.t #           *self.param["dt"]
         # return  forward_reward + height_reward
+
+
         speed_multiplier = 2
         return np.abs(self.ref_x - self.state[0][0]) + np.abs(self.ref_y - self.state[1][0]) + np.abs(self.ref_z - self.state[2][0]) + \
             np.abs(self.state[3][0]*speed_multiplier) + np.abs(self.state[4][0]*speed_multiplier) + np.abs(self.state[5][0]*speed_multiplier) 
+
     def reset(self, h0=5.0):
         # Initial state
         self.state = self.param["state 0"].copy() 

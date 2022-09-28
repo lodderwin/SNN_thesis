@@ -48,8 +48,8 @@ class NEAT(object):
 
 
         self.best_species = None
-        self.div_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
-        self.wx_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
+        self.div_training = [np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75)]
+        self.wx_training = [np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75)]
     def start_evolutionary_process(self, iterations=1):
         i = 0
         # while not self.solved:
@@ -57,10 +57,10 @@ class NEAT(object):
 
             avg_fitness_scores = {}
             # Run the current generation for each species
-            # div_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
-            # wx_training = [np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0), np.random.uniform(0.75, 2.0)]
-            div_training = self.div_training
-            wx_training = self.wx_training
+            div_training = [np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75)]#, np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75)]
+            wx_training = [np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75)]#, np.random.uniform(0.1, 0.75), np.random.uniform(0.1, 0.75)]
+            # div_training = self.div_training
+            # wx_training = self.wx_training
             for s_id, s in self.species.items():
                 avg_fitness = s.run_generation(i, div_training, wx_training)
                 if avg_fitness != None:
@@ -209,18 +209,18 @@ start_time = time.time()
 a = NEAT()
 # a.first_round_evolutionary_process_neat()
 a.start_evolutionary_process(iterations=1)
-with open('testing_decreasedCMAES.pkl', 'wb') as outp:
+with open('testing_decreasedCMAES_2D.pkl', 'wb') as outp:
     dill.dump(a, outp)
 
 print("--- %s seconds ---" % (time.time() - start_time))
 
 
-with open('testing_decreasedCMAES.pkl', 'rb') as f:
+with open('testing_decreasedCMAES_2D.pkl', 'rb') as f:
     a = dill.load(f)
 for i in range(100):
     start_time = time.time()
     a.start_evolutionary_process(iterations=1)
-    with open('testing_decreasedCMAES.pkl', 'wb') as outp:
+    with open('testing_decreasedCMAES_2D.pkl', 'wb') as outp:
         dill.dump(a, outp)
     print("--- %s seconds ---" % (time.time() - start_time))
 

@@ -83,8 +83,8 @@ class objective:
         # self.environment.ref_div = prob_ref*2
         self.environment.ref_div = ref_div
         self.environment.ref_wx = ref_wx
-        prob_ref_div = self.environment.ref_div/2.
-        prob_ref_wx = self.environment.ref_wx/2.
+        prob_ref_div = self.environment.ref_div/2.*2
+        prob_ref_wx = self.environment.ref_wx/2.*2
 
         self.environment.reset()
         divs_lst = []
@@ -133,8 +133,8 @@ class objective:
         # self.environment.ref_div = prob_ref*2
         self.environment.ref_div = ref_div
         self.environment.ref_wx = ref_wx
-        prob_ref_div = self.environment.ref_div/2.
-        prob_ref_wx = self.environment.ref_wx/2.
+        prob_ref_div = self.environment.ref_div/2.*2
+        prob_ref_wx = self.environment.ref_wx/2.*2
 
         self.environment.reset()
         divs_lst = []
@@ -189,8 +189,8 @@ class objective:
 
         self.environment.ref_div = ref_div
         self.environment.ref_wx = ref_wx
-        prob_ref_div = self.environment.ref_div/2.
-        prob_ref_wx = self.environment.ref_wx/2.
+        prob_ref_div = self.environment.ref_div/2.*2
+        prob_ref_wx = self.environment.ref_wx/2.*2
 
         self.environment.reset()
         reward_cum = 0
@@ -729,11 +729,11 @@ class Species(object):
                 environment = Quadhover()
                 objective_genome = objective(environment)
 
-                cycles = 5
+                cycles = 3
                 weights = np.asarray(list({x[0]: x[1].weight for x in temp_genome.genes.items()}.values()))
 
                 cma_es_class  = CMA_ES_single(objective_genome.objective_function_CMAES_single, N=weights.shape[0], xmean=weights, genome=temp_genome)
-                new_weights, best_fitness, condition = cma_es_class.optimize_run(5, 1., 1., temp_genome)
+                new_weights, best_fitness, condition = cma_es_class.optimize_run(cycles, 1., 1., temp_genome)
                 if condition:
                     learning_condition = True
                     print('passed test', genome_id)

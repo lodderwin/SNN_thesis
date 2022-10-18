@@ -202,8 +202,8 @@ class Network(object):
     
     def mutate(self):
         # Genome Weight Mutations
-        # for gene in self.genes.values():
-        #     gene.mutate_weight()
+        for gene in self.genes.values():
+            gene.mutate_weight()
         
         for neuron in self.neurons.values():
             neuron.mutate_decay()

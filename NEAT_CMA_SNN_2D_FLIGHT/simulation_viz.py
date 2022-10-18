@@ -66,14 +66,14 @@ class objective:
         ref_horizontal = []
         act_vertical = []
         act_horizontal = []
-        ref_horizontal_uncoupled = []
+        thrust_setpoint = []
         reward_cum = 0
         for step in range(steps):
             encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], prob_ref_div, prob_ref_wx)
 
             array = mav_model(encoded_input.float()) 
             control_input = self.spike_decoder(array.detach().numpy())
-            print(control_input) #control_input[1]
+            # print(control_input) #control_input[1]
             divs, reward, done, _, _ = self.environment.step(np.asarray([0., control_input[1], control_input[0]]))
             # divs, reward, done, _, _ = self.environment.step(np.asarray([0., 0., 0.]))
             # self.environment._get_reward()    
@@ -85,13 +85,13 @@ class objective:
             ref_vertical.append(self.environment.height_reward)
             act_horizontal.append(self.environment.state[0][0])
             act_vertical.append(self.environment.state[2][0])
-            ref_horizontal_uncoupled.append(self.environment.forward_reward_adm)
+
+            thrust_setpoint.append(control_input[1])
             # divs_lst.append(self.environment.thrust_tc)
         
         plt.plot(ref_horizontal,ref_vertical, c='#93a6f5')
         plt.plot(act_horizontal,act_vertical,  c='#2b54ff')
-        plt.plot(ref_horizontal_uncoupled,ref_vertical, c='#e89725')
-
+        # plt.plot(thrust_setpoint)
         
         plt.ylabel('height (m)')
         plt.xlabel('distance (m)')
@@ -221,8 +221,8 @@ model = place_weights(neuron_matrix, neat_class.best_genome)
 network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
 objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 0.3, 0.3, 10)
-# objective.objective_function_single(model, 1., 1.)
+objective.objective_function_multiple(model, 0.3, 0.3, 1)
+# objective.objective_function_single(model, 0.3, 0.3)
 print(model.state_dict())
 print(neat_class.best_genome.fitness, neat_class.best_genome)
 

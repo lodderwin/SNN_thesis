@@ -3,12 +3,12 @@
 
 INPUT_NEURONS = 18
 OUTPUT_NEURONS = 6
-POPULATION = 50
+POPULATION = 300
 # True = population is const across all species and changing
 # False = genomes may still move species, but each new species gets POPULATION starting genomes
 DYNAMIC_POPULATION = True
-STAGNATED_SPECIES_THRESHOLD = 100
-STAGNATIONS_ALLOWED = 50
+STAGNATED_SPECIES_THRESHOLD = 10000
+STAGNATIONS_ALLOWED = 500
 SPECIATION = True
 CROSSOVER_CHANCE = 0.0 # 0.0 means no crossover, all cloning mutations, default 0.75
 WEAK_SPECIES_THRESHOLD = 10  #orignal 5

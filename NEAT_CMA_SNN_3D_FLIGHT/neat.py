@@ -45,26 +45,32 @@ class NEAT(object):
         self.create_new_species_first(initial_genome, self.population_N)
 
 
+        self.track_learning = []
+        self.track_learning_cma= []
 
         self.best_species = None
-        self.range_coordinates_x = (-2,2)
-        self.range_coordinates_y = (-2,2)
-        self.range_coordinates_z = (0.5, 4.5)
-        self.ref_x = [np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1])]
-        self.ref_y = [np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1])]
-        self.ref_z = [np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1])]
+        self.range_coordinates_x = [(-1,1), (1, 4), (1, 4), (-1, -4), (-1, -4)]
+        self.range_coordinates_y = [(-1,1), (1, 4), (-1, -4), (-1, -4), (1, 4)]
+        self.range_coordinates_z = [(2., 3.), (1., 3.5), (1., 3.5), (1., 3.5), (1., 3.5)]
+
+        # xy hovering  ++ +- -- -+ a
+        # z is randomized between 1 and 5.
+
+        self.ref_x_pos = [np.random.uniform(self.range_coordinates_x[0][0], self.range_coordinates_x[0][1]), np.random.uniform(self.range_coordinates_x[1][0], self.range_coordinates_x[1][1]), np.random.uniform(self.range_coordinates_x[2][0], self.range_coordinates_x[2][1]), np.random.uniform(self.range_coordinates_x[3][0], self.range_coordinates_x[3][1]), np.random.uniform(self.range_coordinates_x[4][0], self.range_coordinates_x[4][1])]
+        self.ref_y_pos = [np.random.uniform(self.range_coordinates_y[0][0], self.range_coordinates_y[0][1]), np.random.uniform(self.range_coordinates_y[1][0], self.range_coordinates_y[1][1]), np.random.uniform(self.range_coordinates_y[2][0], self.range_coordinates_y[2][1]), np.random.uniform(self.range_coordinates_y[3][0], self.range_coordinates_y[3][1]), np.random.uniform(self.range_coordinates_y[4][0], self.range_coordinates_y[4][1])]
+        self.ref_z_pos = [np.random.uniform(self.range_coordinates_z[0][0], self.range_coordinates_z[0][1]), np.random.uniform(self.range_coordinates_z[1][0], self.range_coordinates_z[1][1]), np.random.uniform(self.range_coordinates_z[2][0], self.range_coordinates_z[2][1]), np.random.uniform(self.range_coordinates_z[3][0], self.range_coordinates_z[3][1]), np.random.uniform(self.range_coordinates_z[4][0], self.range_coordinates_z[4][1])]
 
     def start_evolutionary_process(self, iterations=1):
         i = 0
         # while not self.solved:
         while i<iterations:
-            self.ref_x = [np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1]), np.random.uniform(self.range_coordinates_x[0], self.range_coordinates_x[1])]
-            self.ref_y = [np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1]), np.random.uniform(self.range_coordinates_y[0], self.range_coordinates_y[1])]
-            self.ref_z = [np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1]), np.random.uniform(self.range_coordinates_z[0], self.range_coordinates_z[1])]
+            self.ref_x_pos = [np.random.uniform(self.range_coordinates_x[0][0], self.range_coordinates_x[0][1]), np.random.uniform(self.range_coordinates_x[1][0], self.range_coordinates_x[1][1]), np.random.uniform(self.range_coordinates_x[2][0], self.range_coordinates_x[2][1]), np.random.uniform(self.range_coordinates_x[3][0], self.range_coordinates_x[3][1]), np.random.uniform(self.range_coordinates_x[4][0], self.range_coordinates_x[4][1])]
+            self.ref_y_pos = [np.random.uniform(self.range_coordinates_y[0][0], self.range_coordinates_y[0][1]), np.random.uniform(self.range_coordinates_y[1][0], self.range_coordinates_y[1][1]), np.random.uniform(self.range_coordinates_y[2][0], self.range_coordinates_y[2][1]), np.random.uniform(self.range_coordinates_y[3][0], self.range_coordinates_y[3][1]), np.random.uniform(self.range_coordinates_y[4][0], self.range_coordinates_y[4][1])]
+            self.ref_z_pos = [np.random.uniform(self.range_coordinates_z[0][0], self.range_coordinates_z[0][1]), np.random.uniform(self.range_coordinates_z[1][0], self.range_coordinates_z[1][1]), np.random.uniform(self.range_coordinates_z[2][0], self.range_coordinates_z[2][1]), np.random.uniform(self.range_coordinates_z[3][0], self.range_coordinates_z[3][1]), np.random.uniform(self.range_coordinates_z[4][0], self.range_coordinates_z[4][1])]
 
             avg_fitness_scores = {}
             for s_id, s in self.species.items():
-                avg_fitness = s.run_generation(i, self.ref_x, self.ref_y, self.ref_z)
+                avg_fitness = s.run_generation(i, self.ref_x_pos, self.ref_y_pos, self.ref_z_pos)
                 if avg_fitness != None:
                     avg_fitness_scores[s_id] = avg_fitness
                     print('aaa', avg_fitness)
@@ -79,7 +85,7 @@ class NEAT(object):
 
             self.best_species = max(avg_fitness_scores, key=avg_fitness_scores.get)
             self.best_genome = self.species[self.best_species].genomes[self.species[self.best_species].best_genome]
-
+            self.track_learning.append(self.best_genome.fitness)
 
             # Evolve (create the next generation) for each species
             for s_id, s in self.species.items():
@@ -162,7 +168,7 @@ class NEAT(object):
         # for s_id, s in self.species.items():
         #     if genome.is_compatible(s.species_genome_representative):
         #         # If we add to dead species, it didn't deserve to live anyway
-        #         s.add_genome(genome)
+        #         s.add_genome(genome)  ~
         #         return
         
         for s_id, s in list(self.species.items()):
@@ -207,32 +213,32 @@ class NEAT(object):
 import time
 
 # either of the two
-# start_time = time.time() 
-# a = NEAT()
-# # a.first_round_evolutionary_process_neat()
-# a.start_evolutionary_process(iterations=1)
-# with open('testing_decreasedCMAES_3D.pkl', 'wb') as outp:
-#     dill.dump(a, outp)
-
-# print("--- %s seconds ---" % (time.time() - start_time))
-
-
-# with open('testing_decreasedCMAES_3D.pkl', 'rb') as f:
-#     a = dill.load(f)
-# for i in range(100):
-#     start_time = time.time()
-#     a.start_evolutionary_process(iterations=1)
-#     with open('testing_decreasedCMAES_3D.pkl', 'wb') as outp:
-#         dill.dump(a, outp)
-#     print("--- %s seconds ---" % (time.time() - start_time))
-
-# start_time = time.time() 
-
+start_time = time.time() 
 a = NEAT()
-a.species[0].create_random_network(0, 50, 8) 
-network_viz = draw_net(a.species[0].genomes[0])
+# a.first_round_evolutionary_process_neat()
+a.start_evolutionary_process(iterations=1)
+with open('testing_decreasedCMAES_3D_new_control_sys_faster.pkl', 'wb') as outp:
+    dill.dump(a, outp)
 
-network_viz.view()
+print("--- %s seconds ---" % (time.time() - start_time))
+
+
+with open('testing_decreasedCMAES_3D_new_control_sys_faster.pkl', 'rb') as f:
+    a = dill.load(f)
+for i in range(100):
+    start_time = time.time()
+    a.start_evolutionary_process(iterations=1)
+    with open('testing_decreasedCMAES_3D_new_control_sys_faster.pkl', 'wb') as outp:
+        dill.dump(a, outp)
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+# start_time = time.time() 
+
+# a = NEAT()
+# a.species[0].create_random_network(0, 50, 8) 
+# network_viz = draw_net(a.species[0].genomes[0])
+
+# network_viz.view()
 # print("--- %s seconds ---" % (time.time() - start_time))
 
 # draw_nn = DrawNN(model)

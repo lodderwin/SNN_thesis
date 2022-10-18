@@ -103,7 +103,7 @@ class CMA_ES:
 
             if variation_performance<0.05:
                 counts = counts + 1
-                if counts == 5:
+                if counts == 3:
                     print('trying is stopped!')
                     break   
             
@@ -288,7 +288,7 @@ class CMA_ES_single:
             if i==0:
                 self.log_first_best_result = worst_result
 
-            if i==4:
+            if i==2:
                 ratio = (self.log_first_best_result - best_result)/self.log_first_best_result
                 if ratio>0.2:
                     self.condition = True

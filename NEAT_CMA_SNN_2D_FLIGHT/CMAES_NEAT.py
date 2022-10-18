@@ -82,7 +82,7 @@ class CMA_ES:
                 self.arx[self.arx > 1.] = 0.99999
                 self.arx[self.arx < 0.] = 0.0001
 
-                self.arfitness[k] = self.function(self.arx[:,k], div[0], wx[0], genome) + self.function(self.arx[:,k], div[1], wx[1], genome) + self.function(self.arx[:,k], div[2], wx[2], genome) + self.function(self.arx[:,k], div[3], wx[3], genome) + self.function(self.arx[:,k], div[4], wx[4], genome) 
+                self.arfitness[k] = self.function(self.arx[:,k], div[0], wx[0], genome) + self.function(self.arx[:,k], div[1], wx[1], genome) + self.function(self.arx[:,k], div[2], wx[2], genome) #+ self.function(self.arx[:,k], div[3], wx[3], genome) + self.function(self.arx[:,k], div[4], wx[4], genome) 
                 # self.function (genome nodig, place weights, objective)
                 self.counteval = self.counteval + 1 
 
@@ -104,7 +104,7 @@ class CMA_ES:
 
             if variation_performance<0.05:
                 counts = counts + 1
-                if counts == 5:
+                if counts == 3:
                     print('trying is stopped!')
                     break   
             
@@ -289,7 +289,7 @@ class CMA_ES_single:
             if i==0:
                 self.log_first_best_result = worst_result
 
-            if i==4:
+            if i==2:
                 ratio = (self.log_first_best_result - best_result)/self.log_first_best_result
                 if ratio>0.2:
                     self.condition = True

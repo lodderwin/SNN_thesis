@@ -1,3 +1,4 @@
+from base64 import encode
 from tkinter import W
 import numpy as np
 from scipy.stats import expon
@@ -76,27 +77,28 @@ class objective:
         ref_wy_node_plus = bool(np.random.uniform()>=(1-prob_ref_wy[0]))
 ####
 
-        x = torch.tensor([ref_div_node_min, D_plus, D_min, D_delta_plus, D_delta_min, ref_div_node_plus, ref_wx_node_min, wx_plus, wx_min, wx_delta_plus, wx_delta_min, ref_wx_node_plus, ref_wy_node_min, wy_plus, wy_min, wy_delta_plus, wy_delta_min, ref_wy_node_plus])
+        x = torch.tensor([ref_wx_node_min, wx_plus, wx_min, wx_delta_plus, wx_delta_min, ref_wx_node_plus, ref_div_node_min, D_plus, D_min, D_delta_plus, D_delta_min, ref_div_node_plus, ref_wy_node_min, wy_plus, wy_min, wy_delta_plus, wy_delta_min, ref_wy_node_plus])
 
         return x
     def spike_decoder(self, spike_array):
 
 
-        thrust = spike_array[0] - spike_array[1]
-        pitch = spike_array[2] - spike_array[3]
+        pitch = spike_array[0] - spike_array[1]
+        thrust = spike_array[2] - spike_array[3]
         roll = spike_array[4] - spike_array[5]
 
-        return (thrust, pitch,  roll)
+        return (pitch, thrust,  roll)
 
     def objective_function_NEAT(self, model, ref_x, ref_y, ref_z):  # add prob here
 
         steps=100000
         
         mav_model = model
-        # self.environment.ref_div = prob_ref*2
+        # this are coordinates
         self.environment.ref_x = ref_x
         self.environment.ref_y = ref_y
         self.environment.ref_z = ref_z
+        self.environment.coordinates = [ref_x, ref_y, ref_z]
         # prob_ref_div = self.environment.ref_div/2.
         # prob_ref_wx = self.environment.ref_wx/2.
         # prob_ref_wy = self.environment.ref_wy/2.
@@ -105,20 +107,19 @@ class objective:
         divs_lst = []
         ref_lst = []
 
-        self.environment.calc_time_to_point()
+        self.environment.calc_start()
 
         reward_cum = 0
         for step in range(steps):
-            self.environment.calc_prob_encoding_z()
-            self.environment.calc_prob_encoding_x()
-            self.environment.calc_prob_encoding_y()
-
+            self.environment.calc_D_const()
+            self.environment.encoding_x = self.environment.x_prob()
+            self.environment.encoding_z = self.environment.z_prob()
+            self.environment.encoding_y = self.environment.y_prob()
             encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], self.environment.encoding_z, self.environment.encoding_x, self.environment.encoding_y)
-
 
             array = mav_model(encoded_input.float()) 
             control_input = self.spike_decoder(array.detach().numpy())
-            divs, done, _ = self.environment.step(np.asarray([control_input[2], control_input[1], control_input[0]]))
+            divs, done, _ = self.environment.step(np.asarray([control_input[2], control_input[0], control_input[1]]))
             if done:
                 break
             divs_lst.append(self.environment.state[2][0])
@@ -154,6 +155,8 @@ class objective:
         self.environment.ref_x = ref_x
         self.environment.ref_y = ref_y
         self.environment.ref_z = ref_z
+
+        self.environment.coordinates = [ref_x, ref_y, ref_z]
         # prob_ref_div = self.environment.calc_prob_encoding(ref_x)
         # prob_ref_wx = self.environment.ref_wx/2.
         # prob_ref_wy = self.environment.ref_wy/2.
@@ -162,19 +165,19 @@ class objective:
         divs_lst = []
         ref_lst = []
         # print(mav_model.state_dict())
-        self.environment.calc_time_to_point()
+        self.environment.calc_start()
+
         reward_cum = 0
         for step in range(steps):
-            self.environment.calc_prob_encoding_z()
-            self.environment.calc_prob_encoding_x()
-            self.environment.calc_prob_encoding_y()
-
+            self.environment.calc_D_const()
+            self.environment.encoding_x = self.environment.x_prob()
+            self.environment.encoding_z = self.environment.z_prob()
+            self.environment.encoding_y = self.environment.y_prob()
             encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], self.environment.encoding_z, self.environment.encoding_x, self.environment.encoding_y)
+
             array = mav_model(encoded_input.float()) 
-            # print('b',array)
             control_input = self.spike_decoder(array.detach().numpy())
-            # print('a', encoded_input, control_input)           
-            divs, done, _  = self.environment.step(np.asarray([control_input[2], control_input[1], control_input[0]]))
+            divs, done, _ = self.environment.step(np.asarray([control_input[2], control_input[0], control_input[1]]))
 
             if done:
                 break
@@ -202,7 +205,7 @@ class objective:
         # print(reward_cum, self.environment.state[2])
         return reward_cum
 
-    def objective_function_CMAES_single(self, x, genome, ref_x=1., ref_y=1., ref_z=3.5):  # add prob here
+    def objective_function_CMAES_single(self, x, genome, ref_x=1., ref_y=1., ref_z=2.5):  # add prob here
         steps=100000
         tags = list({x[0]: x[1].weight for x in genome.genes.items()}.keys())
         weights = list(x)
@@ -216,6 +219,7 @@ class objective:
         self.environment.ref_x = ref_x
         self.environment.ref_y = ref_y
         self.environment.ref_z = ref_z
+        self.environment.coordinates = [ref_x, ref_y, ref_z]
         # prob_ref_div = self.environment.calc_prob_encoding(ref_x)
         # prob_ref_wx = self.environment.ref_wx/2.
         # prob_ref_wy = self.environment.ref_wy/2.
@@ -223,16 +227,21 @@ class objective:
         self.environment.reset()
         reward_cum = 0
 
-        self.environment.calc_time_to_point()
-        for step in range(steps):
-            self.environment.calc_prob_encoding_z()
-            self.environment.calc_prob_encoding_x()
-            self.environment.calc_prob_encoding_y()
+        self.environment.calc_start()
 
+        reward_cum = 0
+        for step in range(steps):
+
+            self.environment.calc_D_const()
+            self.environment.encoding_x = self.environment.x_prob()
+            self.environment.encoding_z = self.environment.z_prob()
+            self.environment.encoding_y = self.environment.y_prob()
             encoded_input = self.spike_encoder_div(list(self.environment.obs)[-2:], self.environment.encoding_z, self.environment.encoding_x, self.environment.encoding_y)
+
+
             array = mav_model(encoded_input.float()) 
             control_input = self.spike_decoder(array.detach().numpy())
-            divs, done, _ = self.environment.step(np.asarray([control_input[2], control_input[1], control_input[0]]))
+            divs, done, _ = self.environment.step(np.asarray([control_input[2], control_input[0], control_input[1]]))
             if done:
                 break
 
@@ -629,21 +638,21 @@ class Species(object):
 
             
             # # CMA-ES learning 
-            cycles = 12 + int(len(self.genomes[genome_id].hidden_neurons))
+            cycles = 10 + int(len(self.genomes[genome_id].hidden_neurons))
             tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
             weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
 
             # print('aii', weights)
             # for cycle in range(cycles):  
-            cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
-            new_weights, best_fitness = cma_es_class.optimize_run(cycles, ref_x, ref_y, ref_z, self.genomes[genome_id])
+            # cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
+            # new_weights, best_fitness = cma_es_class.optimize_run(cycles, ref_x, ref_y, ref_z, self.genomes[genome_id])
             
             # print('aai', new_weights)
 
-            gene_ad = 0
-            for gene in tags:
-                self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
-                gene_ad = gene_ad + 1
+            # gene_ad = 0
+            # for gene in tags:
+            #     self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
+            #     gene_ad = gene_ad + 1
 
 
 
@@ -760,32 +769,55 @@ class Species(object):
                 random_genome_mate = self.genomes[replicate_ids[index_choice_mate]].clone()                
                 genomes[genome_id] = self.crossover(random_genome, random_genome_mate)
 
-            # Mutate the newly added genome
+            # # Mutate the newly added genome
             learning_condition = False
-            
+            # max_attempts = 5
+            # attempts = 0 
+            # # while not learning_condition:
+            temp_genome = genomes[genome_id].clone()
             while not learning_condition:
-                temp_genome = genomes[genome_id].clone()
+                temp_genome_layers = temp_genome.clone()
                 for i in range(4):       
                     try:
-                        temp_genome.mutate()
+                        temp_genome_layers.mutate()
                     except Exception as e:
-                        temp_genome = genomes[genome_id].clone()
+                        temp_genome_layers = temp_genome.clone()
+                
 
-                neuron_matrix = find_all_routes(temp_genome)
-                neuron_matrix = clean_array(neuron_matrix)
-                temp_genome.neuron_matrix = neuron_matrix
+                try:
+                    neuron_matrix = find_all_routes(temp_genome_layers)
+                    if 6 >neuron_matrix.shape[1]:
+                        temp_genome = temp_genome_layers.clone()
+                        learning_condition = True
+                    else:
+                        # temp_genome_layers = temp_genome.clone()
+                        learning_condition = False
 
-                environment = Quadhover()
-                objective_genome = objective(environment)
+                    
+                except Exception as e:
+                    learning_condition = False
 
-                cycles = 5
-                weights = np.asarray(list({x[0]: x[1].weight for x in temp_genome.genes.items()}.values()))
+                # neuron_matrix = find_all_routes(temp_genome)
+                # neuron_matrix = clean_array(neuron_matrix)
+                # temp_genome.neuron_matrix = neuron_matrix
 
-                cma_es_class  = CMA_ES_single(objective_genome.objective_function_CMAES_single, N=weights.shape[0], xmean=weights, genome=temp_genome)
-                new_weights, best_fitness, condition = cma_es_class.optimize_run(5, temp_genome)
-                if condition:
-                    learning_condition = True
-                    print('passed test', genome_id)
+                # environment = Quadhover()
+                # objective_genome = objective(environment)
+
+                # cycles = 3
+                # weights = np.asarray(list({x[0]: x[1].weight for x in temp_genome.genes.items()}.values()))
+
+                # cma_es_class  = CMA_ES_single(objective_genome.objective_function_CMAES_single, N=weights.shape[0], xmean=weights, genome=temp_genome)
+                # new_weights, best_fitness, condition = cma_es_class.optimize_run(cycles, temp_genome)
+                # if condition:
+                #     learning_condition = True
+                #     print('passed test', genome_id)
+                # else:
+                #     attempts = attempts + 1
+                #     if attempts>max_attempts:
+                #         learning_condition = True
+                #         attempts = 0
+                #         print('newaddition worked')
 
 
                 #mutate only threshold and decay until fits constraints here
@@ -798,7 +830,8 @@ class Species(object):
     def create_random_network(self, genome_id, hidden_neurons, hidden_layers):
         temp_genome = self.genomes[genome_id].clone()
         learning_condition = False
-            
+        max_attempts = 5
+        attempts = 0 
         while not learning_condition:
             temp_genome_layers = temp_genome.clone()
             while len(temp_genome.hidden_neurons)<hidden_neurons: 
@@ -839,6 +872,10 @@ class Species(object):
                     print('passed test', genome_id)
                 else:
                     temp_genome = self.genomes[genome_id].clone()
+                    # attempts = attempts + 1
+                    # if attempts>max_attempts:
+                    #     learning_condition = True
+                    #     attempts = 0
             except Exception as e:
                     temp_genome = self.genomes[genome_id].clone()
         

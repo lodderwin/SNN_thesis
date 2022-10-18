@@ -3,6 +3,7 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 import numpy as np
+import copy
 
 
 class LandingEnv3D:
@@ -24,14 +25,14 @@ class LandingEnv3D:
         self,
         ref_x=0.0,
         ref_y=0.0,
-        ref_z=1.0,
+        ref_z=2.5,
         obs_setpoint=[0, 0, 0.5],
         obs_weight=[1.0] * 3,
         #changed from 0 to 1
         obs_delay=1,
         obs_bias=[0.0] * 3,
-        obs_noise_std=0.0,
-        obs_noise_p_std=0.0,
+        obs_noise_std=0.1,
+        obs_noise_p_std=0.1,
         wind_std=0.0,
         state_0=[0, 0, 2.5, 0, 0, 0, 0, 0, 0, G],
         h_blind=6.,
@@ -40,8 +41,9 @@ class LandingEnv3D:
         seed=None,
         # act_high=[1 * np.pi] * 2 + [0.4 * G],  #why?
         act_high=[1 * 0.785] * 2 + [0.4 * G],  #why?
-        state_bounds=[[-50, -50, 0.1], [50, 50, 100]],
+        state_bounds=[[-5, -5, 0.1], [5, 5, 5]],
         time_bound=30,
+        default_D=0.2,
     ):
         # Parameter dicts:
         # - public for randomizable parameters
@@ -79,8 +81,12 @@ class LandingEnv3D:
         self.ref_x = ref_x
         self.ref_y = ref_y
         self.ref_z = ref_z
-
+        self.start_coordinates = [0., 0., 2.5]
         self.coordinates = [self.ref_x, self.ref_y, self.ref_z]
+
+        self.delta_x = self.coordinates[0] - self.start_coordinates[0]
+        self.delta_y = self.coordinates[1] - self.start_coordinates[1]
+        self.delta_z = self.coordinates[2] - self.start_coordinates[2]
         # build trajectory.
         # fly square with alternating height. if within 1 m, get new coordinates
 
@@ -92,44 +98,111 @@ class LandingEnv3D:
         self.encoding_y = [0.5, 0.5]
         self.encoding_z = [0.5, 0.5]
 
-        self.calc_time_to_point()
-        print(self.ref_x, self.ref_y, self.ref_z, self._param["time bound"])
+        self.D_setpoint_x = 0.0
+        self.D_setpoint_y = 0.0
+        self.D_setpoint_z = 0.0
+
+        self.default_D = default_D
+        # self.calc_time_to_point()
+        # print(self.ref_x, self.ref_y, self.ref_z, self._param["time bound"])
 
         self.reward = 0
-        self.height_reward = state_0[2]
-        self.forward_reward = 0.
-        self.forward_reward_adm = 0.
+        self.height_reward = self.start_coordinates[2]
+        self.forward_reward = self.start_coordinates[0]
+        self.side_reward = self.start_coordinates[1]
 
         self.h_blind = h_blind
 
-    def calc_prob_encoding_x(self):
+    def calc_start(self):
+        self.height_reward = self.start_coordinates[2]
+        self.forward_reward = self.start_coordinates[0]
+        self.side_reward = self.start_coordinates[1]
+        self.delta_x = self.coordinates[0] - self.start_coordinates[0]
+        self.delta_y = self.coordinates[1] - self.start_coordinates[1]
+        self.delta_z = self.coordinates[2] - self.start_coordinates[2]
+
+    def x_prob(self):
+        # print('Xh', self.state[3]/(2*self.state[2]))
+        variable = self.D_setpoint_x - self.state[3][0]/(2*self.state[2][0]) 
+        if variable>=0.:
+            if variable>1.:
+                variable = 1.
+            prob = np.exp(-1./((variable)/0.1))/1. 
+            return (prob, 0.)
+        elif variable<0.:
+            if variable<-1.:
+                variable = -1.
+            prob = np.exp(1./((1*variable)/0.1))/1. 
+            return  (0., prob )
+
+    def z_prob(self):
+        # print('Xh', self.state[3]/(2*self.state[2]))
+        variable = self.D_setpoint_z - self.state[5][0]/(2.*self.state[2][0]) 
+        if variable>=0.:
+            if variable>1.:
+                variable = 1.
+            prob = np.exp(-1./((variable)/0.1))/1. 
+            return (prob, 0.)
+        elif variable<0.:
+            if variable<-1.:
+                variable = -1.
+            prob = np.exp(1./((1*variable)/0.1))/1. 
+            return  (0., prob )
+
+    def y_prob(self):
+        variable = self.D_setpoint_y - self.state[4][0]/(2.*self.state[2][0]) 
+        if variable>=0.:
+            if variable>1.:
+                variable = 1.
+            prob = np.exp(-1./((variable)/0.1))/1. 
+            return (prob, 0.)
+        elif variable<0.:
+            if variable<-1.:
+                variable = -1.
+            prob = np.exp(1./((1*variable)/0.1))/1. 
+            return  (0., prob )
+
+
+    def calc_D_const(self):
+        if self.delta_x >=0.:
+            self.D_setpoint_x = self.default_D
+            if self.coordinates[0] - self.state[2][0]<self.state[0][0]<self.coordinates[0] + self.state[2][0]:
+                self.D_setpoint_x = (self.coordinates[0] - self.state[0][0]) * ((2.*self.default_D)/(2.*self.state[2][0]))
+            if self.coordinates[0] + self.state[2][0]<self.state[0][0]:
+                self.D_setpoint_x = -self.default_D
+        if self.delta_x < 0.:
+            self.D_setpoint_x = -self.default_D
+            if self.coordinates[0] - self.state[2][0]<self.state[0][0]<self.coordinates[0] + self.state[2][0]:
+                self.D_setpoint_x = (self.coordinates[0] - self.state[0][0]) * ((2.*self.default_D)/(2.*self.state[2][0]))
+            if self.coordinates[0] - self.state[2][0]>self.state[0][0]:
+                self.D_setpoint_x = self.default_D
         
-        setpoint_x = self.state[0][0] - self.ref_x
-        if setpoint_x>0.:
-            prob = np.exp(-1./((setpoint_x)/2))/2. + 0.5
-            self.encoding_x = [1.-prob, prob]
-        elif setpoint_x<0.:
-            prob = np.exp(1./((1*setpoint_x)/2))/2. + 0.5
-            self.encoding_x = [prob, 1.-prob]
 
-    def calc_prob_encoding_y(self):
+        if self.delta_y >=0.:
+            self.D_setpoint_y = self.default_D
+            if self.coordinates[1] - self.state[2][0]<self.state[1][0]<self.coordinates[1] + self.state[2][0]:
+                self.D_setpoint_y = (self.coordinates[1] - self.state[1][0]) * ((2.*self.default_D)/(2.*self.state[2][0]))
+            if self.coordinates[1] + self.state[2][0]<self.state[1][0]:
+                self.D_setpoint_y = -self.default_D
+        if self.delta_y < 0.:
+            self.D_setpoint_y = -self.default_D
+            if self.coordinates[1] - self.state[2][0]<self.state[1][0]<self.coordinates[1] + self.state[2][0]:
+                self.D_setpoint_y = (self.coordinates[1] - self.state[1][0]) * ((2.*self.default_D)/(2.*self.state[2][0]))
+            if self.coordinates[1] - self.state[2][0]>self.state[1][0]:
+                self.D_setpoint_y = self.default_D
 
-        setpoint_y = self.state[1][0] - self.ref_y
-        if setpoint_y>0.:
-            prob = np.exp(-1./((setpoint_y)/2))/2. + 0.5
-            self.encoding_y = [1.-prob, prob]
-        elif setpoint_y<0.:
-            prob = np.exp(1./((1*setpoint_y)/2))/2. + 0.5
-            self.encoding_y = [prob, 1.-prob]
-
-    def calc_prob_encoding_z(self):
-        setpoint_z = self.state[2][0] - self.ref_z
-        if setpoint_z>0.:
-            prob = np.exp(-1./((setpoint_z)/2))/2. + 0.5
-            self.encoding_z = [1.-prob, prob]
-        elif setpoint_z<0.:
-            prob = np.exp(1./((1*setpoint_z)/2))/2. + 0.5
-            self.encoding_z = [prob, 1.-prob]
+        if self.delta_z >=0.:
+            self.D_setpoint_z = self.default_D
+            if (self.coordinates[2] - 1.)<self.state[2][0]<(self.coordinates[2] + 1.):
+                self.D_setpoint_z = (self.coordinates[2] - self.state[2][0]) * ((2.*self.default_D)/(2.*1))
+            if self.coordinates[2] + 1<self.state[2][0]:
+                self.D_setpoint_z = -self.default_D
+        if self.delta_z < 0.:
+            self.D_setpoint_z = -self.default_D
+            if (self.coordinates[2] - 1.)<self.state[2][0]<(self.coordinates[2] + 1.):
+                self.D_setpoint_z = (self.coordinates[2] - self.state[2][0]) * ((2.*self.default_D)/(2.*1))
+            if self.coordinates[2] - 1>self.state[2][0]:
+                self.D_setpoint_z = self.default_D
 
     def calc_time_to_point(self):
         self._param["time bound"] =  np.sqrt( np.sqrt(self.ref_x**2 + self.ref_y**2 + np.abs(self.ref_z-2.5)**2) )*4
@@ -168,6 +241,9 @@ class LandingEnv3D:
         # Input act is in (-1, 1), scaled with 'act high'
         # Offset G later!
         self.act = (act.clip(-1.0, 1.0) * self._param["act high"]).reshape(-1, 1)
+
+
+
         # print(self.act)
         #TODO: add clamp for thrust and pitch
 
@@ -178,7 +254,7 @@ class LandingEnv3D:
         # Update state with forward Euler
         self.state += self._get_state_dot() * self.param["dt"]
         
-
+        self.reward = self._get_reward() + self.reward
         self.done = self._check_out_of_bounds() | self._check_out_of_time() 
 
         # Clamp altitude to bounds (VERY important for reward because of 1/h)
@@ -189,8 +265,13 @@ class LandingEnv3D:
                 self.state[0:3], pos_min.reshape(-1, 1), pos_max.reshape(-1, 1)
             )
             self.t = np.clip(self.t, 0.0, self._param["time bound"])
-
-            self.reward = self._get_reward()
+            # self.reward = self.reward + np.abs(self.state[5][0]*5)
+            # self.reward = self.reward + np.abs(self.state[3][0]*5)
+            speed_multiplier = 50
+            # self.reward = self.reward + np.abs(self.state[4][0]*5)
+            self.reward = self.reward + np.abs(self.ref_x - self.state[0][0]) + np.abs(self.ref_y - self.state[1][0]) + np.abs(self.ref_z - self.state[2][0])*2 +\
+            np.abs(self.state[3][0]*speed_multiplier) + np.abs(self.state[4][0]*speed_multiplier)  + np.abs(self.state[5][0]*speed_multiplier) 
+            # self.reward = self._get_reward()
 
 
         return self._get_obs(), self.done, self.height_reward
@@ -296,22 +377,26 @@ class LandingEnv3D:
         #         * self.param["obs weight"]
         #     ).sum()
         # ).clip(-1.0, 1.0)
-        # if self.t<1.0:
-        #     None
-        # else:
-        #     self.height_reward =  self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
-        #     # self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
-        #     self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
-        #     self.forward_reward_adm = self.forward_reward_adm + (self.ref_wx*self.height_reward/2)*self.param["dt"]
+        if self.t<1.0:
+            # None
+            return 0.
+        else:
+            z_delta = (self.D_setpoint_z*self.state[2][0]/1.)*self.param["dt"]
+            x_delta = (self.D_setpoint_x*self.state[2][0]/1.)*self.param["dt"]
+            y_delta = (self.D_setpoint_y*self.state[2][0]/1.)*self.param["dt"]
 
-        # height_reward = ((np.abs(self.state[2][0] - self.height_reward))**1)*self.t   #        *self.param["dt"]
-        # forward_reward =((np.abs(self.state[0][0] - self.forward_reward))**1)*self.t #           *self.param["dt"]
-        # return  forward_reward + height_reward
+            height_reward = np.abs((self.state[2][0] - self.height_reward ) - z_delta)   #        *self.param["dt"]
+            forward_reward = np.abs((self.state[0][0] - self.forward_reward) - x_delta) # 
+            side_reward = np.abs((self.state[1][0] - self.side_reward) - y_delta) # 
+            self.height_reward = copy.copy(self.state[2][0])  #something wrong with copy
+            self.forward_reward = copy.copy(self.state[0][0])    #      *self.param["dt"]
+            self.side_reward = copy.copy(self.state[1][0]) 
+            return  forward_reward + height_reward + side_reward
 
 
-        speed_multiplier = 2
-        return np.abs(self.ref_x - self.state[0][0]) + np.abs(self.ref_y - self.state[1][0]) + np.abs(self.ref_z - self.state[2][0]) + \
-            np.abs(self.state[3][0]*speed_multiplier) + np.abs(self.state[4][0]*speed_multiplier) + np.abs(self.state[5][0]*speed_multiplier) 
+        # speed_multiplier = 1
+        # return np.abs(self.ref_x - self.state[0][0]) + np.abs(self.ref_y - self.state[1][0]) + np.abs(self.ref_z - self.state[2][0]) +\
+        #     np.abs(self.state[3][0]*speed_multiplier) + np.abs(self.state[4][0]*speed_multiplier)  + np.abs(self.state[5][0]*speed_multiplier) 
 
     def reset(self, h0=5.0):
         # Initial state
@@ -369,27 +454,34 @@ class LandingEnv3D:
 
     
 
-    # def checkfunction(self):
+    # def checkfunction(self, ref_div, ref_wx, ref_wy):
 
-    #     plt_traj_ref = []
+    #     D_x = []
     #     plt_traj = []
-
-
+    #     self.ref_z = ref_div
+    #     self.ref_wx = ref_wx
+    #     self.ref_wy = ref_wy
+      
+    #     self.coordinates = [ref_wx, ref_wy, ref_div]
+    #     self.calc_start()
     #     while not self.done:
-
+    #         prob_y = self.y_prob()
+    #         self.calc_D_const()
     #         self.done = self._check_out_of_bounds() | self._check_out_of_time() | self._check_projected_landing()
     #         self.t += self.param["dt"]
 
 
-    #         self.state[2][0] += -0.015
-    #         self.state[3][0] += 0.
-    #         self.state[0][0] += 0.0
+    #         # self.state[2][0] += -0.015
+    #         # self.state[3][0] += 0.
+    #         self.state[1][0] += 0.01
 
-    #         reward = self._get_reward()
-    #         self.reward = self.reward + reward
-    #         print('a', reward)
-    #         plt_traj_ref.append(self.height_reward)
-    #         plt_traj.append(self.state[2][0])
+    #         # reward = self._get_reward()
+    #         # self.reward = self.reward + reward
+    #         # print('a', reward)
+    #         # print(self.D_setpoint_z)
+    #         D_x.append(prob_y)
+
+    #         plt_traj.append(self.state[1][0])
             
 
     #     if self.done:
@@ -398,40 +490,19 @@ class LandingEnv3D:
     #                 self.state[0:3], pos_min.reshape(-1, 1), pos_max.reshape(-1, 1)
     #             )
     #             self.t = np.clip(self.t, 0.0, self._param["time bound"])
-
-    #             second_calc_place_holder = self.height_reward
-    #             self.forward_reward = (self.ref_wx*self.state[2][0]/2)*self.param["dt"]
-    #             if self.state[2][0] == self._param["state bounds"][1, 2]:
-    #                 # self.reward = self.reward + np.abs((self.max_t - self.t) * self.max_h)
-
-    #                 while self.height_reward >= self._param["state bounds"][0, 2]:
-    #                     self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
-    #                     self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
-    #                     self.reward = self.reward + np.abs(self.param["dt"]* (self.max_h- self.height_reward)) + np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
-
-    #                 # self.reward = self.reward + np.abs((t_adm - self.t) * self.max_h)
-    #             if np.abs(self.state[2][0] - self._param["state bounds"][0, 2])<0.01:
-    #                 self.reward = self.reward + np.abs(self.state[5][0]*10)
-    #                 self.reward = self.reward + np.abs(self.state[3][0]*10)
-    #                 while self.height_reward >= self._param["state bounds"][0, 2]:
-    #                     self.height_reward = self.height_reward - (self.ref_div*self.height_reward/2)*self.param["dt"]
-    #                     self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
-    #                     # self.reward = self.reward + np.abs(self.height_reward/(self.height_reward/4) *self.height_reward *0.5)#dit is nog fout
-    #                     print(self.reward, np.abs(self.param["dt"]*self.height_reward)) 
-    #                     plt_traj_ref.append(self.height_reward)
-    #                     self.reward = self.reward  + np.abs(self.param["dt"]*self.height_reward) + np.abs(self.state[0][0] - self.forward_reward)*self.param["dt"]
-
+    #             self.reward = self.reward + np.abs(self.state[5][0]*10)
+    #             self.reward = self.reward + np.abs(self.state[3][0]*10)
+               
     #     x = np.arange(0, len(plt_traj), 1)
-    #     plt.plot(plt_traj, label='actual')
-    #     plt.plot(plt_traj_ref, label='reference')
+    #     plt.plot(plt_traj[:1000],D_x[:1000])
     #     # plt.fill_between(x, plt_traj, plt_traj_ref[:len(plt_traj)], color='#808080')
         
-    #     plt.ylabel('height (m)')
-    #     plt.xlabel('timesteps 0.02 (s)')
-    #     plt.legend()
-    #     plt.title('Constant divergence landing')
-    #     plt.savefig('show2D_ref.png')
-    #     plt.show()
+    #     # plt.ylabel('height (m)')
+    #     # plt.xlabel('timesteps 0.02 (s)')
+    #     # plt.legend()
+    #     # plt.title('Constant divergence landing')
+    #     # plt.savefig('show2D_ref.png')
+    #     # plt.show()
         
     #     # print(self.reward)
 
@@ -470,7 +541,7 @@ def world2body(phi, theta, psi):
     # check actual reward function by simulating straight line trajectories
 
 
-# environment = LandingEnv3D(ref_div=1., ref_wx=1.)
+# environment = LandingEnv3D()
 # environment.reset()
-# environment.checkfunction()
+# environment.checkfunction(3.5,-3.5,4.)
 

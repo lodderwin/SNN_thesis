@@ -40,7 +40,7 @@ class LandingEnv3D:
         # act_high=[1 * np.pi] * 2 + [0.4 * G],  #why?
         act_high=[1 * 0.785] * 2 + [0.4 * G],  #why?
         state_bounds=[[-50, -50, 0.1], [50, 50, 100]],
-        time_bound=30,
+        time_bound=60,
     ):
         # Parameter dicts:
         # - public for randomizable parameters
@@ -293,9 +293,9 @@ class LandingEnv3D:
             None
             return 0.
         else:
-            height_decrease = (self.ref_div*self.height_reward/2)*self.param["dt"]
+            height_decrease = (self.ref_div*self.height_reward/2.)*self.param["dt"]
             # self.forward_reward = self.forward_reward + (self.ref_wx*self.height_reward/2)*self.param["dt"]
-            forward_gain = (self.ref_wx*self.state[2][0]/2)*self.param["dt"]
+            forward_gain = (self.ref_wx*self.state[2][0]/2.)*self.param["dt"]
             # print(forward_gain)
             
             height_reward = np.abs((self.height_reward - self.state[2][0]) - height_decrease)   #        *self.param["dt"]

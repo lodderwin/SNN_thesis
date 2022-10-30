@@ -849,9 +849,6 @@ class Species(object):
                 else:
                     temp_genome_layers = temp_genome.clone()
                     
-                    
-
-
             try:
                 neuron_matrix = find_all_routes(temp_genome)
                 neuron_matrix = clean_array(neuron_matrix)

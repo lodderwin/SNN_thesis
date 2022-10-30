@@ -162,6 +162,7 @@ class objective:
                 self.environment.ref_y = self.ref_y_pos[i]
                 self.environment.ref_z = self.ref_z_pos[i]
                 self.environment.coordinates = [self.ref_x_pos[i], self.ref_y_pos[i], self.ref_z_pos[i]]
+                mav_model.reset()    
 
                 self.environment.reset()
                 ref_vertical = []
@@ -215,6 +216,7 @@ class objective:
 
                 ax.plot(act_horizontal,act_side,act_vertical, c='#93a6f5', alpha=0.9)
 
+
         
         # ax.plot(np.arange(act_side,all_runs_horizontal[nearest_traj_int],all_runs_vertical[nearest_traj_int], c='#2b54ff', alpha=0.9, label='Actual trajectory')
         # ax.plot(act_side,ref_horizontal,ref_vertical,  c='#ffa72b', alpha=0.9, label='Reference trajectory')
@@ -231,7 +233,6 @@ class objective:
         plt.savefig('2710meeting.png')
         # plt.plot(input_control)
         print(self.environment.state[3],self.environment.state[5])
-        mav_model.reset()    
         reward_cum = self.environment.reward
         print('reward:', reward_cum, self.environment.t)
         # self.visualize_spikes(spikes, self.environment.t)
@@ -262,7 +263,7 @@ network_viz.view()
 # draw_nn.draw()
 
 # species = 0
-# genome = 9
+# genome = 250
 
 
 # neuron_matrix = find_all_routes(neat_class.species[species].genomes[genome])
@@ -271,7 +272,7 @@ network_viz.view()
 # network_viz = draw_net(neat_class.species[species].genomes[genome])
 # environment = Quadhover()
 # objective = objective(model, environment=environment)
-# objective.objective_function_multiple(model, 0.3, 0.3, 1)
+# objective.objective_function_multiple(model, 1)
 # network_viz.view()
 # print(neat_class.species[species].genomes[genome].fitness, neat_class.best_genome)
 

@@ -217,18 +217,18 @@ a = NEAT()
 #     print(genome_id)
 ## a.first_round_evolutionary_process_neat()
 a.start_evolutionary_process(iterations=1)
-with open('testing_decreasedCMAES_2D_fast_test_nocma.pkl', 'wb') as outp:
+with open('testing_decreasedCMAES_2D_fast_test_nocma_test.pkl', 'wb') as outp:
     dill.dump(a, outp)
 
 print("--- %s seconds ---" % (time.time() - start_time))
 
 
-with open('testing_decreasedCMAES_2D_fast_test_nocma.pkl', 'rb') as f:
+with open('testing_decreasedCMAES_2D_fast_test_nocma_test.pkl', 'rb') as f:
     a = dill.load(f)
 for i in range(100):
     start_time = time.time()
     a.start_evolutionary_process(iterations=1)
-    with open('testing_decreasedCMAES_2D_fast_test_nocma.pkl', 'wb') as outp:
+    with open('testing_decreasedCMAES_2D_fast_test_nocma_test.pkl', 'wb') as outp:
         dill.dump(a, outp)
     print("--- %s seconds ---" % (time.time() - start_time))
 

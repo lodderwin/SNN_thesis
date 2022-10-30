@@ -199,7 +199,8 @@ class Network(object):
 
         return len(self.genes)/((self.num_input_neurons + len(self.hidden_neurons))*self.num_output_neurons + \
             (self.num_input_neurons + len(self.hidden_neurons)-1)*(self.num_input_neurons + len(self.hidden_neurons)) / 2.)
-    
+        
+        # return for 
     def mutate(self):
         # Genome Weight Mutations
         for gene in self.genes.values():

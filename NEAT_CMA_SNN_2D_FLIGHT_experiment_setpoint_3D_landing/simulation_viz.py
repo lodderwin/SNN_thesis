@@ -8,6 +8,9 @@ import dill
 import matplotlib.pyplot as plt
 from visualize import DrawNN
 
+from species import objective as objective_cma
+from CMAES_NEAT import CMA_ES, CMA_ES_single
+
 
 class objective:
     def __init__(self, model, environment):
@@ -66,8 +69,7 @@ class objective:
         self.environment.ref_div = ref_div
         self.environment.ref_wx = ref_wx
         self.environment.ref_wy = ref_wy
-        prob_ref_div = self.environment.ref_div/2.*2.
-        prob_ref_wx = self.environment.ref_wx/2.*2.
+
 
         self.environment.reset()
         ref_vertical = []
@@ -173,53 +175,15 @@ class objective:
                 
                 # plt.plot(ref_horizontal_uncoupled,ref_vertical, c='#e89725')
                 # divs_lst.append(self.environment.thrust_tc)
-            if act_horizontal[-1]<nearest_traj:
-                nearest_traj = act_horizontal[-1]
-                nearest_traj_int = len(all_runs_vertical)
-
-            if act_horizontal[-1]>furthest_traj:
-                furthest_traj = act_horizontal[-1]
-                furthest_traj_int = len(all_runs_vertical)
-                
             all_runs_vertical.append(act_vertical)
             all_runs_horizontal.append(act_horizontal)
 
             ax.plot(act_horizontal,act_side,act_vertical, c='#93a6f5', alpha=0.9)
             # print(act_horizontal)
 
-        pad_vertical = len(max(all_runs_vertical, key=len))
-        all_runs_matrix_vertical = np.array([i + [0]*(pad_vertical-len(i)) for i in all_runs_vertical])
-        # print(all_runs_matrix_vertical)
-        min_vert = np.amin(all_runs_matrix_vertical, axis=0)
-        min_vert = min_vert[min_vert!=0]
-        max_vert = np.amax(all_runs_matrix_vertical, axis=0)
-        max_vert = max_vert[max_vert!=0]
-        
-        pad_horizontal = len(max(all_runs_horizontal, key=len))
-        all_runs_matrix_horizontal = np.array([i + [0]*(pad_horizontal-len(i)) for i in all_runs_horizontal])
-        min_hor = np.amin(all_runs_matrix_horizontal, axis=0)
-        min_hor = min_hor[min_hor!=0]
-        max_hor = np.amax(all_runs_matrix_horizontal, axis=0)
-        max_hor = max_hor[max_hor!=0]
-
-        # print(min_vert)
-        # min_length_plots_min = min([len(min_vert),len(min_hor)])
-        # plt.plot(min_hor[:min_length_plots_min],min_vert[:min_length_plots_min], c='#2b54ff')
-        # min_length_plots_max = min([len(max_vert),len(max_hor)])
-        # plt.plot(max_hor[:min_length_plots_max],max_vert[:min_length_plots_max],  c='#2b54ff')
-        # print(min_length_plots_max, min_length_plots_min)
 
 
-        # plt.plot(all_runs_horizontal[nearest_traj_int],all_runs_vertical[nearest_traj_int], c='#2b54ff')
-        
-        # plt.plot(all_runs_horizontal[furthest_traj_int],all_runs_vertical[furthest_traj_int],  c='#2b54ff')
-        # ax.plot(np.arange(len(all_runs_horizontal[furthest_traj_int]))*0.02,all_runs_horizontal[furthest_traj_int],all_runs_vertical[furthest_traj_int],  c='#2b54ff', alpha=0.9)
 
-        # plt.plot(ref_horizontal_uncoupled,ref_vertical, c='#e89725')
-        # plt.plot(ref_horizontal,ref_vertical, c='#eb9e34')
-
-        # ax.plot(np.arange(act_side,all_runs_horizontal[nearest_traj_int],all_runs_vertical[nearest_traj_int], c='#2b54ff', alpha=0.9, label='Actual trajectory')
-        # ax.plot(act_side,ref_horizontal,ref_vertical,  c='#ffa72b', alpha=0.9, label='Reference trajectory')
         print(ref_horizontal[-1], ref_vertical[-1])
         print(act_horizontal[-1], act_vertical[-1])
         ax.set_zlabel('height (m)')
@@ -228,7 +192,7 @@ class objective:
         plt.title('Divergence: '+ str(ref_div))
         ax.view_init(15, 45)  #(15,90)
         ax.legend()
-        # plt.savefig('2709meeting.png')
+        plt.savefig('2510meeting.png')
         # plt.plot(input_control)
         print(self.environment.state[3],self.environment.state[5])
         mav_model.reset()    
@@ -236,17 +200,17 @@ class objective:
         print('reward:', reward_cum, self.environment.t)
         return reward_cum
 
-with open('testing_decreasedCMAES_2D_fast_test_3Dlanding.pkl', 'rb') as f:
+with open('3Dlanding_2_reward_01D.pkl', 'rb') as f:
     neat_class = dill.load(f)
 
 # neat_class.species[neat_class.best_species].genomes[neat_class.best_genome]
 neuron_matrix = find_all_routes(neat_class.best_genome)
-neuron_matrix = clean_array(neuron_matrix) 
+neuron_matrix = clean_array(neuron_matrix)
 model = place_weights(neuron_matrix, neat_class.best_genome)
 network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
 objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 0.5, 0.5, 0.5, 1)
+objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 5)
 # objective.objective_function_single(model, 0.3, 0.3)
 print(model.state_dict())
 print(neat_class.best_genome.fitness, neat_class.best_genome)
@@ -255,6 +219,37 @@ print(neat_class.best_genome.fitness, neat_class.best_genome)
 network_viz.view()
 # print(neat_class.species[neat_class.best_species].genomes[neat_class.best_genome].fitness, neat_class.best_genome)
 
+environment = Quadhover()
+objective_genome = objective_cma(environment)
+# # CMA-ES learning 
+cycles = 5
+tags = list({x[0]: x[1].weight for x in neat_class.best_genome.genes.items()}.keys())
+weights = np.asarray(list({x[0]: x[1].weight for x in neat_class.best_genome.genes.items()}.values()))
+
+# print('aii', weights)
+
+cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=neat_class.best_genome)
+new_weights, best_fitness = cma_es_class.optimize_run(cycles, [0.1, 0.1, 0.1], [0.1, 0.1, 0.1], [0.1, 0.1, 0.1], neat_class.best_genome)
+
+# print('aai', new_weights)
+
+gene_ad = 0
+for gene in tags:
+    neat_class.best_genome.genes[gene].weight = new_weights[gene_ad]
+    gene_ad = gene_ad + 1
+# print(neat_class.best_genome.fitness)
+
+
+neuron_matrix = find_all_routes(neat_class.best_genome)
+neuron_matrix = clean_array(neuron_matrix) 
+model = place_weights(neuron_matrix, neat_class.best_genome)
+network_viz = draw_net(neat_class.best_genome)
+environment = Quadhover()
+# objective = objective(model, environment=environment)
+objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 1)
+
+# with open('testing_decreasedCMAES_3D_new_control_sys_faster_random_30_4_really_goodone_withCMA_test.pkl', 'wb') as outp:
+#     dill.dump(neat_class, outp)
 
 
 # draw_nn = DrawNN(model)

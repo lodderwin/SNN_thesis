@@ -45,12 +45,12 @@ class NEAT(object):
         # self.create_new_species(initial_genome, self.population_N)
         self.create_new_species_first(initial_genome, self.population_N)
 
-
+        self.track_learning = []
 
         self.best_species = None
-        self.div_training = [np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6)]
-        self.wx_training = [np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6)]
-        self.wy_training = [np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6)]
+        self.div_training = [np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12)]
+        self.wx_training = [np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12)]
+        self.wy_training = [np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12)]
     def start_evolutionary_process(self, iterations=1):
         i = 0
         # while not self.solved:
@@ -58,9 +58,9 @@ class NEAT(object):
 
             avg_fitness_scores = {}
             # Run the current generation for each species
-            div_training = [np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6)]#, np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6)]
-            wx_training = [np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6)]#, np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6)]
-            wy_training = [np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6), np.random.uniform(0.4, 0.6)]
+            div_training = [np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12)]#, np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12)]
+            wx_training = [np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12)]#, np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12)]
+            wy_training = [np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12), np.random.uniform(0.08, 0.12)]
             # div_training = self.div_training
             # wx_training = self.wx_training
             for s_id, s in self.species.items():
@@ -79,7 +79,7 @@ class NEAT(object):
 
             self.best_species = max(avg_fitness_scores, key=avg_fitness_scores.get)
             self.best_genome = self.species[self.best_species].genomes[self.species[self.best_species].best_genome]
-
+            self.track_learning.append(self.best_genome.fitness)
 
             # Evolve (create the next generation) for each species
             for s_id, s in self.species.items():
@@ -207,27 +207,30 @@ class NEAT(object):
 import time
 
 # either of the two
-start_time = time.time() 
-a = NEAT()
-# for genome_id, genome in a.species[0].genomes.items():
-#     a.species[0].create_random_network(genome_id, 12, 5) 
-#     print(genome_id)
-## a.first_round_evolutionary_process_neat()
-a.start_evolutionary_process(iterations=1)
-with open('testing_decreasedCMAES_2D_fast_test_3Dlanding.pkl', 'wb') as outp:
-    dill.dump(a, outp)
+# start_time = time.time() 
+# a = NEAT()
+# # for genome_id, genome in a.species[0].genomes.items():
+# #     a.species[0].create_random_network(genome_id, 12, 5) 
+# #     print(genome_id)
+# ## a.first_round_evolutionary_process_neat()
+# a.start_evolutionary_process(iterations=1)
+# with open('3Dlanding_2_reward_01D.pkl', 'wb') as outp:
+#     dill.dump(a, outp)
 
-print("--- %s seconds ---" % (time.time() - start_time))
+# print("--- %s seconds ---" % (time.time() - start_time))
 
 
-with open('testing_decreasedCMAES_2D_fast_test_3Dlanding.pkl', 'rb') as f:
+with open('3Dlanding_2_reward_01D.pkl', 'rb') as f:
     a = dill.load(f)
-for i in range(100):
+for i in range(50):
     start_time = time.time()
     a.start_evolutionary_process(iterations=1)
-    with open('testing_decreasedCMAES_2D_fast_test_3Dlanding.pkl', 'wb') as outp:
+    with open('3Dlanding_2_reward_01D.pkl', 'wb') as outp:
         dill.dump(a, outp)
     print("--- %s seconds ---" % (time.time() - start_time))
+
+#continue CMA-ES learning
+# for how many cycles?
 
 
 

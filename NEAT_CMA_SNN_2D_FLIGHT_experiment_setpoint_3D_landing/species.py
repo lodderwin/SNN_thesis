@@ -96,8 +96,6 @@ class objective:
         self.environment.ref_div = ref_div
         self.environment.ref_wx = ref_wx
         self.environment.ref_wy = ref_wy
-        prob_ref_div = self.environment.ref_div/2.*2.
-        prob_ref_wx = self.environment.ref_wx/2.*2.
 
         self.environment.reset()
         divs_lst = []
@@ -150,8 +148,6 @@ class objective:
         self.environment.ref_div = ref_div
         self.environment.ref_wx = ref_wx
         self.environment.ref_wy = ref_wy
-        prob_ref_div = self.environment.ref_div/2.*2.
-        prob_ref_wx = self.environment.ref_wx/2.*2.
 
         self.environment.reset()
         divs_lst = []
@@ -196,7 +192,7 @@ class objective:
         # print(reward_cum, self.environment.state[2])
         return reward_cum
 
-    def objective_function_CMAES_single(self, x, genome, ref_div=0.5, ref_wx=0.5, ref_wy=0.5):
+    def objective_function_CMAES_single(self, x, genome, ref_div=0.2, ref_wx=0.2, ref_wy=0.2):
         
         steps=100000
         tags = list({x[0]: x[1].weight for x in genome.genes.items()}.keys())
@@ -211,8 +207,6 @@ class objective:
         self.environment.ref_div = ref_div
         self.environment.ref_wx = ref_wx
         self.environment.ref_wy = ref_wy
-        prob_ref_div = self.environment.ref_div/2.*2.
-        prob_ref_wx = self.environment.ref_wx/2.*2.
         
         self.environment.reset()
         reward_cum = 0
@@ -622,21 +616,21 @@ class Species(object):
 
                 
                 # # CMA-ES learning 
-                cycles = 10 + int(len(self.genomes[genome_id].hidden_neurons)/2.)
-                tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
-                weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
+                # cycles = 10 + int(len(self.genomes[genome_id].hidden_neurons)/2.)
+                # tags = list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.keys())
+                # weights = np.asarray(list({x[0]: x[1].weight for x in self.genomes[genome_id].genes.items()}.values()))
 
-                # print('aii', weights)
-                # for cycle in range(cycles):  
-                cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
-                new_weights, best_fitness = cma_es_class.optimize_run(cycles, div_training, wx_training, wy_trianing, self.genomes[genome_id])
+                # # print('aii', weights)
+                # # for cycle in range(cycles):  
+                # cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=self.genomes[genome_id])
+                # new_weights, best_fitness = cma_es_class.optimize_run(cycles, div_training, wx_training, wy_trianing, self.genomes[genome_id])
                 
-                # print('aai', new_weights)
+                # # print('aai', new_weights)
 
-                gene_ad = 0
-                for gene in tags:
-                    self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
-                    gene_ad = gene_ad + 1
+                # gene_ad = 0
+                # for gene in tags:
+                #     self.genomes[genome_id].genes[gene].weight = new_weights[gene_ad]
+                #     gene_ad = gene_ad + 1
 
 
 
@@ -647,16 +641,16 @@ class Species(object):
                         
                 reward = 0
                 for i in range(len(div_training)):
-                    add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i], wy_trianing[i])  + objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i], wy_trianing[i])
-                    reward = reward + add/2.
+                    add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i], wy_trianing[i]) # + objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i], wy_trianing[i])
+                    reward = reward + add
                     # print(div_training[i], wx_training[i], add)
                 # reward = reward/float(len(div_training))
                 print('reward', reward)
             
             else:
                 for i in range(len(div_training)):
-                    add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i], wy_trianing[i])  + objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i], wy_trianing[i])
-                    reward = reward + add/2.
+                    add = objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i], wy_trianing[i]) # + objective_genome.objective_function_NEAT(model, div_training[i], wx_training[i], wy_trianing[i])
+                    reward = reward + add
                     # print(div_training[i], wx_training[i], add)
                 # reward = reward/float(len(div_training))
                 print('reward for unlearnable', reward)
@@ -761,37 +755,52 @@ class Species(object):
             # Mutate the newly added genome
             learning_condition = False
             
+            temp_genome = genomes[genome_id].clone()
             while not learning_condition:
-                temp_genome = genomes[genome_id].clone()
-                for i in range(4):       
+                temp_genome_layers = temp_genome.clone()
+                for i in range(2):       
                     try:
-                        temp_genome.mutate()
+                        temp_genome_layers.mutate()
                     except Exception as e:
-                        temp_genome = genomes[genome_id].clone()
+                        temp_genome_layers = temp_genome.clone()
+                
 
-                neuron_matrix = find_all_routes(temp_genome)
-                neuron_matrix = clean_array(neuron_matrix)
-                temp_genome.neuron_matrix = neuron_matrix
+                try:
+                    neuron_matrix = find_all_routes(temp_genome_layers)
+                    if 6 >neuron_matrix.shape[1]:
+                        temp_genome = temp_genome_layers.clone()
+                        learning_condition = True
+                    else:
+                        # temp_genome_layers = temp_genome.clone()
+                        learning_condition = False
 
-                environment = Quadhover()
-                objective_genome = objective(environment)
+                    
+                except Exception as e:
+                    learning_condition = False
+                # neuron_matrix = find_all_routes(temp_genome)
+                # neuron_matrix = clean_array(neuron_matrix)
+                # temp_genome.neuron_matrix = neuron_matrix
 
-                cycles = 3
-                weights = np.asarray(list({x[0]: x[1].weight for x in temp_genome.genes.items()}.values()))
+                # environment = Quadhover()
+                # objective_genome = objective(environment)
 
-                cma_es_class  = CMA_ES_single(objective_genome.objective_function_CMAES_single, N=weights.shape[0], xmean=weights, genome=temp_genome)
-                new_weights, best_fitness, condition = cma_es_class.optimize_run(cycles, 0.5, 0.5, 0.5, temp_genome)
-                if condition:
+                # cycles = 3
+                # weights = np.asarray(list({x[0]: x[1].weight for x in temp_genome.genes.items()}.values()))
+
+                # cma_es_class  = CMA_ES_single(objective_genome.objective_function_CMAES_single, N=weights.shape[0], xmean=weights, genome=temp_genome)
+                # new_weights, best_fitness, condition = cma_es_class.optimize_run(cycles, 0.5, 0.5, 0.5, temp_genome)
+                # if condition:
                     learning_condition = True
-                    temp_genome.learnable = True
-                    print('passed test', genome_id)
-                else:
-                    temp_genome.learnable = False
-                    learning_condition = True
+                    # temp_genome.learnable = True
+                    # print('passed test', genome_id)
+                # else:
+                #     temp_genome.learnable = False
+                #     learning_condition = True
 
 
                 #mutate only threshold and decay until fits constraints here
-
+                except Exception as e:
+                    learning_condition = False
             genomes[genome_id] = temp_genome.clone()
             genome_id += 1
 
@@ -892,7 +901,7 @@ class Species(object):
                                     reverse=True)
         print('sorted_network_ids', sorted_network_ids, [x.fitness for x in self.genomes.values()])
         # alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.5))]
-        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.25))]
+        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.35))]
         # dead_network_ids = sorted_network_ids[int(round(float(self.species_population)/2.0)):]
 
         return alive_network_ids

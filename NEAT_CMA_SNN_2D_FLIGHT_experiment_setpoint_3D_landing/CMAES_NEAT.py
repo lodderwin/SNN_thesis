@@ -65,7 +65,7 @@ class CMA_ES:
 
         self.first_per_perf = 10000000000
         self.count_weak_perf = 0
-
+        self.best_weights = []
         
 
     def optimize_run(self, runs, div, wx, wy, genome):
@@ -104,16 +104,17 @@ class CMA_ES:
 
             if variation_performance<0.05:
                 counts = counts + 1
-                if counts == 4:
+                if counts == 10000000:
                     print('trying is stopped!')
                     break   
             
             if best_result<self.first_per_perf:
                 self.count_weak_perf = 0
                 self.first_per_perf = best_result
+                self.best_weights = self.arx[:,self.arindex[0]]
             else:
                 self.count_weak_perf = self.count_weak_perf + 1
-                if self.count_weak_perf==5:
+                if self.count_weak_perf==1000000:
                     print('tryingisstopped')
                     break       
 
@@ -150,11 +151,10 @@ class CMA_ES:
             print(self.arindex[0])
             self.array_plot.append([self.arx[0,self.arindex[0]], self.arx[1,self.arindex[0]]])
 
-        #write weights to pickle
             weights = self.arx
             best_fitness = self.arfitness[0]
 
-        return weights[:,self.arindex[0]], best_fitness
+        return self.best_weights, best_fitness
 
 
 

@@ -210,7 +210,7 @@ model = place_weights(neuron_matrix, neat_class.best_genome)
 network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
 objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 5)
+objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 10)
 # objective.objective_function_single(model, 0.3, 0.3)
 print(model.state_dict())
 print(neat_class.best_genome.fitness, neat_class.best_genome)
@@ -219,34 +219,34 @@ print(neat_class.best_genome.fitness, neat_class.best_genome)
 network_viz.view()
 # print(neat_class.species[neat_class.best_species].genomes[neat_class.best_genome].fitness, neat_class.best_genome)
 
-environment = Quadhover()
-objective_genome = objective_cma(environment)
-# # CMA-ES learning 
-cycles = 5
-tags = list({x[0]: x[1].weight for x in neat_class.best_genome.genes.items()}.keys())
-weights = np.asarray(list({x[0]: x[1].weight for x in neat_class.best_genome.genes.items()}.values()))
+# environment = Quadhover()
+# objective_genome = objective_cma(environment)
+# # # CMA-ES learning 
+# cycles = 5
+# tags = list({x[0]: x[1].weight for x in neat_class.best_genome.genes.items()}.keys())
+# weights = np.asarray(list({x[0]: x[1].weight for x in neat_class.best_genome.genes.items()}.values()))
 
-# print('aii', weights)
+# # print('aii', weights)
 
-cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=neat_class.best_genome)
-new_weights, best_fitness = cma_es_class.optimize_run(cycles, [0.1, 0.1, 0.1], [0.1, 0.1, 0.1], [0.1, 0.1, 0.1], neat_class.best_genome)
+# cma_es_class  = CMA_ES(objective_genome.objective_function_CMAES, N=weights.shape[0], xmean=weights, genome=neat_class.best_genome)
+# new_weights, best_fitness = cma_es_class.optimize_run(cycles, [0.1, 0.1, 0.1], [0.1, 0.1, 0.1], [0.1, 0.1, 0.1], neat_class.best_genome)
 
-# print('aai', new_weights)
+# # print('aai', new_weights)
 
-gene_ad = 0
-for gene in tags:
-    neat_class.best_genome.genes[gene].weight = new_weights[gene_ad]
-    gene_ad = gene_ad + 1
-# print(neat_class.best_genome.fitness)
+# gene_ad = 0
+# for gene in tags:
+#     neat_class.best_genome.genes[gene].weight = new_weights[gene_ad]
+#     gene_ad = gene_ad + 1
+# # print(neat_class.best_genome.fitness)
 
 
-neuron_matrix = find_all_routes(neat_class.best_genome)
-neuron_matrix = clean_array(neuron_matrix) 
-model = place_weights(neuron_matrix, neat_class.best_genome)
-network_viz = draw_net(neat_class.best_genome)
-environment = Quadhover()
-# objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 1)
+# neuron_matrix = find_all_routes(neat_class.best_genome)
+# neuron_matrix = clean_array(neuron_matrix) 
+# model = place_weights(neuron_matrix, neat_class.best_genome)
+# network_viz = draw_net(neat_class.best_genome)
+# environment = Quadhover()
+# # objective = objective(model, environment=environment)
+# objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 1)
 
 # with open('testing_decreasedCMAES_3D_new_control_sys_faster_random_30_4_really_goodone_withCMA_test.pkl', 'wb') as outp:
 #     dill.dump(neat_class, outp)

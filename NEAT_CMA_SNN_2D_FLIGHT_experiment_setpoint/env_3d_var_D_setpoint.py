@@ -26,7 +26,7 @@ class LandingEnv3D:
         ref_wx=1.0,
         obs_setpoint=[0, 0, 0.5],
         obs_weight=[1.0] * 3,
-        #changed from 0 to 1
+        #changed from 0 to 1 
         obs_delay=1,
         obs_bias=[0.0] * 3,
         obs_noise_std=0.1,

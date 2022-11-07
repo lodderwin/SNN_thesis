@@ -224,7 +224,7 @@ class objective:
         mav_model.reset()    
         reward_cum = self.environment.reward
         print('reward:', reward_cum, self.environment.t)
-        # self.visualize_spikes(spikes,  self.environment.t)
+        self.visualize_spikes(spikes,  self.environment.t)
 
 
         # plt.plot(np.asanyarray(output_thrust), label='Thrust input')
@@ -246,7 +246,7 @@ model = place_weights(neuron_matrix, neat_class.best_genome)
 network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
 objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 0.2, 0.2, 100)
+objective.objective_function_multiple(model, 0.2, 0.2, 1)
 # objective.objective_function_single(model, 0.5, 0.5)
 print(model.state_dict())
 print(neat_class.best_genome.fitness, neat_class.best_genome)

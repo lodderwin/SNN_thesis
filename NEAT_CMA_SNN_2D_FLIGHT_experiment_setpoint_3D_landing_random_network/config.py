@@ -3,7 +3,7 @@
 
 INPUT_NEURONS = 18
 OUTPUT_NEURONS = 6
-POPULATION = 250
+POPULATION = 75
 # True = population is const across all species and changing
 # False = genomes may still move species, but each new species gets POPULATION starting genomes
 DYNAMIC_POPULATION = True
@@ -27,7 +27,9 @@ WEIGHT_COMPATIBILITY_CONSTANT = 0.4
 
 
 #Added later stage
-V_DECAY_MUTATION = 0.3
-THRESHOLD_MUTATION = 0.3
+UNIFORM_V_DECAY_MUTATION_RATE = 0.95
+UNIFORM_THRESHOLD_MUTATION_RATE = 0.925
+V_DECAY_MUTATION = 0.9
+THRESHOLD_MUTATION = 0.9
 
 GENE_REMOVE_RATE = 1.0

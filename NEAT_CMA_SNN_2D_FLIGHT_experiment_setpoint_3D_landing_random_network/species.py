@@ -758,7 +758,7 @@ class Species(object):
             temp_genome = genomes[genome_id].clone()
             while not learning_condition:
                 temp_genome_layers = temp_genome.clone()
-                for i in range(2):       
+                for i in range(1):       
                     try:
                         temp_genome_layers.mutate()
                     except Exception as e:
@@ -932,7 +932,7 @@ class Species(object):
                                     reverse=True)
         print('sorted_network_ids', sorted_network_ids, [x.fitness for x in self.genomes.values()])
         # alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.5))]
-        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.35))]
+        alive_network_ids = sorted_network_ids[:int(round(float(self.species_population)*0.5))]
         # dead_network_ids = sorted_network_ids[int(round(float(self.species_population)/2.0)):]
 
         return alive_network_ids

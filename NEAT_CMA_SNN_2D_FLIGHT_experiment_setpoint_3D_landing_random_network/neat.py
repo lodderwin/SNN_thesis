@@ -213,25 +213,25 @@ class NEAT(object):
 import time
 
 # either of the two
-start_time = time.time() 
-a = NEAT()
-for genome_id, genome in a.species[0].genomes.items():
-    a.species[0].create_random_network(genome_id, 20, 6) 
-    print(genome_id)
-## a.first_round_evolutionary_process_neat()
-a.start_evolutionary_process(iterations=1)
-with open('NEAT_3D_Landing_35_benchmarkgo.pkl', 'wb') as outp:
-    dill.dump(a, outp)
+# start_time = time.time() 
+# a = NEAT()
+# # for genome_id, genome in a.species[0].genomes.items():
+# #     a.species[0].create_random_network(genome_id, 20, 6) 
+# #     print(genome_id)
+# ## a.first_round_evolutionary_process_neat()
+# a.start_evolutionary_process(iterations=1)
+# with open('NEAT_3D_Landing_35_benchmarkgo.pkl', 'wb') as outp:
+#     dill.dump(a, outp)
 
-print("--- %s seconds ---" % (time.time() - start_time))
+# print("--- %s seconds ---" % (time.time() - start_time))
 
 
-with open('NEAT_3D_Landing_35_benchmarkgo.pkl', 'rb') as f:
+with open('NEAT_3D_Landing_35_benchmarkgo_changeobj_dividetseemstowork.pkl', 'rb') as f:
     a = dill.load(f)
-for i in range(100):
+for i in range(50):
     start_time = time.time()
     a.start_evolutionary_process(iterations=1)
-    with open('NEAT_3D_Landing_35_benchmarkgo.pkl', 'wb') as outp:
+    with open('NEAT_3D_Landing_35_benchmarkgo_changeobj_dividetseemstowork.pkl', 'wb') as outp:
         dill.dump(a, outp)
     print("--- %s seconds ---" % (time.time() - start_time))
 

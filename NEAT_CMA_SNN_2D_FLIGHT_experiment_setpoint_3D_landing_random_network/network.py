@@ -532,7 +532,7 @@ class Network(object):
                 new_input_gene = Gene(self.innovation.get_new_innovation_number(),
                                       selected_gene.input_neuron,
                                       new_neuron,
-                                      1)
+                                      np.random.uniform(0.1, 0.9)) #hmmmmmmmmmmmmm
                 self.networkx_network.add_edge(selected_gene.input_neuron.id, new_neuron.id, weight=-1.)
 
                 new_output_gene = Gene(self.innovation.get_new_innovation_number(),

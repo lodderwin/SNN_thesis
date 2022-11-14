@@ -129,7 +129,7 @@ class objective:
     def objective_function_multiple(self, model, ref_div, ref_wx, ref_wy, runs):  # add prob here
         all_runs_vertical = []
         all_runs_horizontal = []
-        cm = plt.cm.get_cmap('RdYlBu')
+        cm = plt.cm.get_cmap('RdYlBu_r')
         nearest_traj = 100.
         nearest_traj_int = 0
         furthest_traj = 0.
@@ -158,6 +158,10 @@ class objective:
             speed_x = []
             speed_y = []
             speed_z = []
+
+            d_constant_z = []
+            d_constant_x = []
+            d_constant_y = []
 
             spikes = np.zeros((18,1))
 
@@ -193,6 +197,16 @@ class objective:
                 speed_x.append(self.environment.state[3][0])
                 speed_y.append(self.environment.state[4][0])
                 speed_z.append(self.environment.state[5][0])
+
+
+
+                # d_constant_z.append(self.environment.height_reward_time_step)
+                # d_constant_x.append(self.environment.forward_reward_time_step)
+                # d_constant_y.append(self.environment.side_reward_time_step)
+
+                d_constant_z.append(self.environment.ref_div + self.environment.state[5][0]/(2*self.environment.state[2][0]) )
+                d_constant_x.append(self.environment.ref_wx - self.environment.state[3][0]/(2*self.environment.state[2][0]) )
+                d_constant_y.append(self.environment.ref_wy - self.environment.state[4][0]/(2*self.environment.state[2][0]) )
                 # input_control.append(control_input[0])
                 # print(self.environment.state[2][0])
 
@@ -212,11 +226,12 @@ class objective:
                 
             all_runs_vertical.append(act_vertical)
             all_runs_horizontal.append(act_horizontal)
-            color_value = np.sqrt(np.asanyarray(speed_x)**2 + np.asanyarray(speed_y)**2 + np.asanyarray(speed_y)**2)
+            # color_value = np.sqrt(np.asanyarray(speed_x)**2 + np.asanyarray(speed_x)**2 + np.asanyarray(speed_y)**2)
+            color_value = np.sqrt(np.asanyarray(d_constant_z)**2 + np.asanyarray(d_constant_x)**2 + np.asanyarray(d_constant_y)**2)
             
             sc = ax.scatter(act_horizontal, act_side, act_vertical, c=color_value, alpha=0.8, s=1., cmap=cm)
             # print(act_horizontal)
-            
+            sc.set_clim(0.,0.1)
             all_touchdowns_z.append(self.environment.state[5][0])
             all_touchdowns_x.append(self.environment.state[3][0])
             all_touchdowns_y.append(self.environment.state[4][0])
@@ -243,7 +258,7 @@ class objective:
 
         ax.view_init(15, 70)
         ax.legend()
-        # plt.savefig('25-10meeting_.png')
+        # plt.savefig('08-11divcmeeting_.png')
         
         plt.show()
         plt.close()
@@ -276,7 +291,7 @@ class objective:
         # plt.savefig('anglemav.png')
         return reward_cum
 # testing_decreasedCMAES_2D_fast_test for 2D hard landing
-with open('delete.pkl', 'rb') as f:
+with open('NEAT_3D_Landing_35_benchmarkgo.pkl', 'rb') as f:
     neat_class = dill.load(f)
 
 # neat_class.species[neat_class.best_species].genomes[neat_class.best_genome]
@@ -286,7 +301,7 @@ model = place_weights(neuron_matrix, neat_class.best_genome)
 network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
 objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 0.2, 0.2, 0.2, 10)
+objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 2)
 # objective.objective_function_single(model, 0.5, 0.5)
 print(model.state_dict())
 print(neat_class.best_genome.fitness, neat_class.best_genome)

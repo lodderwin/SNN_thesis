@@ -122,7 +122,7 @@ class objective:
         nearest_traj_int = 0
         furthest_traj = 0.
         furthest_traj_int = 0
-        fig = plt.figure(figsize=(5,5))
+        fig = plt.figure(figsize=(10,10))
         ax = fig.gca(projection='3d')
         for run in range(runs):
 
@@ -133,8 +133,8 @@ class objective:
             self.environment.ref_div = ref_div
             self.environment.ref_wx = ref_wx
             self.environment.ref_wy = ref_wy
-            prob_ref_div = self.environment.ref_div/2.*2.
-            prob_ref_wx = self.environment.ref_wx/2.*2.
+            # prob_ref_div = self.environment.ref_div/2.*2.
+            # prob_ref_wx = self.environment.ref_wx/2.*2.
 
             self.environment.reset()
             ref_vertical = []
@@ -202,7 +202,7 @@ class objective:
         ax.set_xlabel('distance x (m)')
         ax.set_ylabel('distance y (m)')
         plt.title('Divergence: '+ str(ref_div))
-        ax.view_init(5, 15)  #(15,90)
+        ax.view_init(5, 5)  #(15,90)
         ax.legend()
         plt.savefig('2510meeting.png')
         # plt.plot(input_control)
@@ -212,7 +212,7 @@ class objective:
         print('reward:', reward_cum, self.environment.t)
         return reward_cum
 
-with open('NEAT_3D_Landing_35_benchmarkgo.pkl', 'rb') as f:
+with open('NEAT_3D_Landing_35_benchmarkgo_changeobj_dividetseemstowork.pkl', 'rb') as f:
     neat_class = dill.load(f)
 
 # neat_class.species[neat_class.best_species].genomes[neat_class.best_genome]
@@ -222,10 +222,10 @@ model = place_weights(neuron_matrix, neat_class.best_genome)
 network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
 objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 10)
+objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 1)
 # objective.objective_function_single(model, 0.3, 0.3)
-print(model.state_dict())
-print(neat_class.best_genome.fitness, neat_class.best_genome)
+# print(model.state_dict())
+print(neat_class.best_genome_ever.fitness, neat_class.best_genome)
 
 
 network_viz.view()
@@ -280,7 +280,7 @@ network_viz.view()
 # draw_nn.draw()
 
 # species = 0
-# genome = 148
+# genome = 101
 
 
 # neuron_matrix = find_all_routes(neat_class.species[species].genomes[genome])
@@ -289,7 +289,7 @@ network_viz.view()
 # network_viz = draw_net(neat_class.species[species].genomes[genome])
 # environment = Quadhover()
 # objective = objective(model, environment=environment)
-# objective.objective_function_multiple(model, 0.2, 0.2, 0.2, 10)
+# objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 1)
 # network_viz.view()
 # print(neat_class.species[species].genomes[genome].fitness, neat_class.best_genome)
 

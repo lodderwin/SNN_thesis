@@ -12,8 +12,8 @@ def calc_prob_encoding_x(x):
     #     prob = 1./(1. + np.exp(1*x))
     #     return  prob
     
-    prob_1 = 1./  ( 1.+ np.exp(-5.*x)) - 0.1
-    prob_2 = 1./  ( 1.+ np.exp(5.*x)) - 0.1
+    prob_1 = 1./  ( 1.+ np.exp(-20.*x)) - 0.1
+    prob_2 = 1./  ( 1.+ np.exp(20*x)) - 0.1
     if prob_1<0.:
         prob_1 = 0.
     if prob_2<0.:
@@ -37,8 +37,8 @@ for i in range(len(x)):
 
 # plt.plot(x[:int(len(y_plus)/2)], y_plus[:int(len(y_plus)/2)], label='Negative node')
 # plt.plot(x[int(len(y_plus)/2):], y_plus[int(len(y_plus)/2):], label='Positive node')
-plt.plot(x, y_plus)
-plt.plot(x, y_neg)
+plt.plot(x, y_plus, label='Positive node')
+plt.plot(x, y_neg, label='Negative node')
 # plt.plot(x, y_neg, c='#ff9900', label='Negative node')
 plt.xlabel(r"$\Delta$" + ' divergence setpoint (constant)')
 plt.ylabel('Probability *100%')
@@ -54,4 +54,4 @@ plt.title('Setpoint vs. Firing Probability')
 # plt.xlabel('distance (m)')
 # plt.ylabel('time given (s)')
 # plt.title('Time given to reach setpoint')
-# plt.savefig('againmeeting_time11-10.png')
+# plt.savefig('againmeeting_time0811.png')

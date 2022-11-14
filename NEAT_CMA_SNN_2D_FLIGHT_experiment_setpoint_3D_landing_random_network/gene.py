@@ -27,7 +27,7 @@ class Gene(object):
         # Weight Mutation
         if np.random.uniform() < config.WEIGHT_MUTATION_RATE:
             if np.random.uniform() < config.UNIFORM_WEIGHT_MUTATION_RATE:
-                self.weight += np.random.uniform(-0.08, 0.08)
+                self.weight += np.random.uniform(-0.05, 0.05)
             else:
                 self.randomize_weight()
                 # None

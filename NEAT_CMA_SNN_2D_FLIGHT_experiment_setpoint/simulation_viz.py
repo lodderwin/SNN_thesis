@@ -236,7 +236,7 @@ class objective:
         # plt.savefig('thrustmav.png')
         return reward_cum
 # testing_decreasedCMAES_2D_fast_test for 2D hard landing
-with open('testing_decreasedCMAES_2D_fast_test_nocma.pkl', 'rb') as f:
+with open('test.pkl', 'rb') as f:
     neat_class = dill.load(f)
 
 # neat_class.species[neat_class.best_species].genomes[neat_class.best_genome]

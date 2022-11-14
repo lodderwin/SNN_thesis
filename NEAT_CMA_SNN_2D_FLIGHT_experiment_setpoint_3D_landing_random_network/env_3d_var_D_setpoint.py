@@ -86,6 +86,10 @@ class LandingEnv3D:
         self.forward_reward = state_0[0]
         self.side_reward = state_0[1]
 
+        self.height_reward_time_step = 0   #        *self.param["dt"]
+        self.forward_reward_time_step = 0 
+        self.side_reward_time_step = 0
+
         self.h_blind = h_blind
 
         self.track_forward = np.zeros((3,1))
@@ -117,14 +121,14 @@ class LandingEnv3D:
 
     def x_prob(self):
         # print('Xh', self.state[3]/(2*self.state[2]))
-        variable = self.ref_wx - self.state[3]/(2*self.state[2]) 
+        variable = self.ref_wx - self.state[3][0]/(self.state[2][0]) 
         if variable>1.:
             variable = 1.
         elif variable<-1.:
             variable = -1.
 
-        prob_1 = 1./  ( 1.+ np.exp(-5.*variable)) - 0.1
-        prob_2 =  1./  ( 1.+ np.exp(5.*variable)) - 0.1
+        prob_1 = 1./  ( 1.+ np.exp(-15.*variable)) - 0.1
+        prob_2 =  1./  ( 1.+ np.exp(15.*variable)) - 0.1
         if prob_1<0.:
             prob_1 = 0.
         if prob_2<0.:
@@ -145,14 +149,14 @@ class LandingEnv3D:
 
     def y_prob(self):
         # print('Xh', self.state[3]/(2*self.state[2]))
-        variable = self.ref_wy - self.state[4]/(2*self.state[2]) 
+        variable = self.ref_wy - self.state[4][0]/(self.state[2][0]) 
         if variable>1.:
             variable = 1.
         elif variable<-1.:
             variable = -1.
 
-        prob_1 = 1./  ( 1.+ np.exp(-5.*variable)) - 0.1
-        prob_2 =  1./  ( 1.+ np.exp(5.*variable)) - 0.1
+        prob_1 = 1./  ( 1.+ np.exp(-15.*variable)) - 0.1
+        prob_2 =  1./  ( 1.+ np.exp(15.*variable)) - 0.1
         if prob_1<0.:
             prob_1 = 0.
         if prob_2<0.:
@@ -174,15 +178,15 @@ class LandingEnv3D:
     def z_prob(self):
         # print('Dh', self.state[5]/(2.*self.state[2]))
         # div = 
-        variable = self.ref_div + self.state[5]/(2.*self.state[2]) 
+        variable = self.ref_div + self.state[5][0]/(self.state[2][0]) 
 
         if variable>1.:
             variable = 1.
         elif variable<-1.:
             variable = -1.
 
-        prob_1 = 1./  ( 1.+ np.exp(-5.*variable)) - 0.1
-        prob_2 =  1./  ( 1.+ np.exp(5.*variable)) - 0.1
+        prob_1 = 1./  ( 1.+ np.exp(-15.*variable)) - 0.1
+        prob_2 =  1./  ( 1.+ np.exp(15.*variable)) - 0.1
         if prob_1<0.:
             prob_1 = 0.
         if prob_2<0.:
@@ -237,9 +241,22 @@ class LandingEnv3D:
             )
             self.t = np.clip(self.t, 0.0, self._param["time bound"])
             # print('here', self.reward)
-            self.reward = self.reward + np.abs(self.state[5][0]*2.5)
-            self.reward = self.reward + np.abs(self.state[3][0]*2.5)
-            self.reward = self.reward + np.abs(self.state[4][0]*2.5)
+            multiplier = 1.
+            self.reward = self.reward + np.abs(self.state[5][0]*multiplier)
+            self.reward = self.reward + np.abs(self.state[3][0]*multiplier)
+            self.reward = self.reward + np.abs(self.state[4][0]*multiplier)
+            self.reward = self.reward/self.t
+            # print('f',self.reward)
+            # self.reward = self.reward*np.abs(4.-self.state[0][0])
+            # self.reward = self.reward*np.abs(4.-self.state[1][0])
+            # self.reward = self.reward*np.abs(0.-self.state[2][0])
+            # print('tijd', self.reward)
+            # self.reward = self.reward*(np.abs(20- self.t)**2)
+            # if self.t<2.0:
+            #     self.reward = self.reward*10100000000000
+            # print('g',self.reward)
+            # self.reward = self.reward/((self.t - 1)**2)
+            # print('h',self.reward)
         
         
 
@@ -360,11 +377,16 @@ class LandingEnv3D:
             side_gain = (self.ref_wy*self.state[2][0])*self.param["dt"]
             # print(forward_gain)
             
-            height_reward = np.abs((self.height_reward - self.state[2][0]) - height_decrease)   #        *self.param["dt"]
-            forward_reward = np.abs((self.state[0][0] - self.forward_reward) - forward_gain) #  
-            side_reward =    np.abs((self.state[1][0] - self.side_reward) - side_gain)
-            self.track_forward = self.track_forward + height_reward# +forward_reward #+ (self.state[0][0] - self.forward_reward)       *self.param["dt"]
-            self.track_forward = np.hstack((self.track_forward, np.asanyarray([[height_reward], [forward_reward], [side_reward]])))
+            # self.height_reward_time_step = np.abs((self.height_reward - self.state[2][0]) - height_decrease) #        *self.param["dt"]
+            # self.forward_reward_time_step = np.abs((self.state[0][0] - self.forward_reward) - forward_gain) #  
+            # self.side_reward_time_step = np.abs((self.state[1][0] - self.side_reward) - side_gain)
+
+            self.height_reward_time_step = np.abs(self.ref_div + self.state[5][0]/(2.*self.state[2][0]))
+            self.forward_reward_time_step = np.abs(self.ref_wx - self.state[3][0]/(self.state[2][0]))
+            self.side_reward_time_step = np.abs(self.ref_wy - self.state[4][0]/(self.state[2][0]))
+
+            self.track_forward = self.track_forward + self.height_reward_time_step# +forward_reward #+ (self.state[0][0] - self.forward_reward)       *self.param["dt"]
+            self.track_forward = np.hstack((self.track_forward, np.asanyarray([[self.height_reward_time_step], [self.forward_reward_time_step], [self.side_reward_time_step]])))
             # print(self.track_forward)
             dev_reward = np.sum(np.std(self.track_forward[:,-200:], axis=1))*self.param["dt"]
             self.height_reward = copy.copy(self.state[2][0])  #something wrong with copy
@@ -375,7 +397,8 @@ class LandingEnv3D:
 
             self.track_dev_reward = dev_reward
             # print(forward_reward, height_reward, side_reward, dev_reward)
-            return  forward_reward + height_reward + side_reward #+ dev_reward
+
+            return  self.forward_reward_time_step + self.height_reward_time_step + self.side_reward_time_step 
         
     def reset(self, h0=5.0):
         # Initial state

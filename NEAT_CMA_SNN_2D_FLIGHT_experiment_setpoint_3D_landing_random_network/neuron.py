@@ -72,18 +72,44 @@ class Neuron(object):
         self.output_genes[gene.innovation_number] = gene
 
 
+    # def mutate_decay(self):
+    #     if np.random.uniform() < config.V_DECAY_MUTATION:
+    #         # self.v_decay = np.random.uniform(0.1, 0.9)
+    #         self.v_decay += np.random.uniform(-0.08, 0.08)
+    #         if self.v_decay<0.1:
+    #             self.v_decay = 0.1
+    #         if self.v_decay>0.9:
+    #             self.v_decay = 0.9
+    # def mutate_threshold(self):
+    #     if np.random.uniform() < config.THRESHOLD_MUTATION:
+    #         # self.threshold = np.random.uniform(0.4, 0.8)
+    #         self.threshold += np.random.uniform(-0.08, 0.08)
+    #         if self.threshold<0.5:
+    #             self.threshold = 0.5
+    #         if self.threshold>0.9:
+    #             self.threshold = 0.9
+
     def mutate_decay(self):
+        # Weight Mutation
         if np.random.uniform() < config.V_DECAY_MUTATION:
-            # self.v_decay = np.random.uniform(0.1, 0.9)
-            self.v_decay += np.random.uniform(-0.08, 0.08)
+            if np.random.uniform() < config.UNIFORM_V_DECAY_MUTATION_RATE:
+                self.v_decay += np.random.uniform(-0.02, 0.02)
+            else:
+                self.v_decay = np.random.uniform(0.1, 0.9)
+                # None
             if self.v_decay<0.1:
                 self.v_decay = 0.1
             if self.v_decay>0.9:
                 self.v_decay = 0.9
+
     def mutate_threshold(self):
+        # Weight Mutation
         if np.random.uniform() < config.THRESHOLD_MUTATION:
-            # self.threshold = np.random.uniform(0.4, 0.8)
-            self.threshold += np.random.uniform(-0.08, 0.08)
+            if np.random.uniform() < config.UNIFORM_THRESHOLD_MUTATION_RATE:
+                self.threshold += np.random.uniform(-0.02, 0.02)
+            else:
+                self.threshold = np.random.uniform(0.5, 0.9)
+                # None
             if self.threshold<0.5:
                 self.threshold = 0.5
             if self.threshold>0.9:

@@ -276,7 +276,7 @@ class objective:
         # plt.savefig('anglemav.png')
         return reward_cum
 # testing_decreasedCMAES_2D_fast_test for 2D hard landing
-with open('delete_CMA.pkl', 'rb') as f:
+with open('NEAT_3D_Landing_35_benchmarkgo.pkl', 'rb') as f:
     neat_class = dill.load(f)
 
 # neat_class.species[neat_class.best_species].genomes[neat_class.best_genome]
@@ -286,7 +286,7 @@ model = place_weights(neuron_matrix, neat_class.best_genome)
 network_viz = draw_net(neat_class.best_genome)
 environment = Quadhover()
 objective = objective(model, environment=environment)
-objective.objective_function_multiple(model, 0.2, 0.2, 0.2, 10)
+objective.objective_function_multiple(model, 0.1, 0.1, 0.1, 10)
 # objective.objective_function_single(model, 0.5, 0.5)
 print(model.state_dict())
 print(neat_class.best_genome.fitness, neat_class.best_genome)

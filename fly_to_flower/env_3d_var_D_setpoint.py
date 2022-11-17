@@ -94,6 +94,11 @@ class LandingEnv3D:
 
         self.track_forward = np.zeros((3,1))
         self.track_dev_reward = 0
+
+        self.act_z = []
+        self.act_x = []
+        self.act_y = []
+
     def _checks(self):
         assert self.param["obs setpoint"].shape[0] == 3
         assert self.param["obs delay"] >= 0 and isinstance(self.param["obs delay"], int)
@@ -118,7 +123,8 @@ class LandingEnv3D:
         self._checks()
         self.rng = np.random.default_rng(self.param["seed"])
 
-
+    def function_fit(self, x, z):
+        return z[0]*x**3 + z[1]*x**2 + z[2]*x + z[3]
     def x_prob(self):
         # print('Xh', self.state[3]/(2*self.state[2]))
         variable = self.ref_wx - self.state[3][0]/(self.state[2][0]) 
@@ -232,6 +238,10 @@ class LandingEnv3D:
         # Check whether done
         self.done = self._check_out_of_bounds() | self._check_out_of_time() | self._check_projected_landing()
 
+        self.act_z.append(self.state[2][0])
+        self.act_x.append(self.state[0][0])
+        self.act_y.append(self.state[1][0])
+
         # Clamp altitude to bounds (VERY important for reward because of 1/h)
         # TODO: make this nicer?
         if self.done:
@@ -241,10 +251,29 @@ class LandingEnv3D:
             )
             self.t = np.clip(self.t, 0.0, self._param["time bound"])
             # print('here', self.reward)
-            multiplier = 1.
-            self.reward = self.reward + np.abs(self.state[5][0]*multiplier)
-            self.reward = self.reward + np.abs(self.state[3][0]*multiplier)
-            self.reward = self.reward + np.abs(self.state[4][0]*multiplier)
+            multiplier_speed = 1.
+            multiplier_std = 10.
+            self.reward = self.reward + np.abs(self.state[5][0]*multiplier_speed)
+            self.reward = self.reward + np.abs(self.state[3][0]*multiplier_speed)
+            self.reward = self.reward + np.abs(self.state[4][0]*multiplier_speed)
+
+            time_steps = 3000
+            if len(self.act_z)<time_steps:
+                time_steps = int(len(self.act_z))
+
+            self.act_z = np.asarray(self.act_z)
+            self.act_x = np.asarray(self.act_x)
+            self.act_y = np.asarray(self.act_y)
+            z_z = np.polyfit(np.arange(0,time_steps, 1), self.act_z[-time_steps:], 3)
+            z_x = np.polyfit(np.arange(0,time_steps, 1), self.act_x[-time_steps:], 3)
+            z_y = np.polyfit(np.arange(0,time_steps, 1), self.act_y[-time_steps:], 3)
+            diff_z = self.act_z[-time_steps:] - self.function_fit(np.arange(0, time_steps, 1), z_z)
+            diff_x = self.act_x[-time_steps:] - self.function_fit(np.arange(0, time_steps, 1), z_x)
+            diff_y = self.act_y[-time_steps:] - self.function_fit(np.arange(0, time_steps, 1), z_y)
+            self.reward = self.reward + np.sqrt(np.sum((diff_z**2))/time_steps) * multiplier_std + \
+                                        np.sqrt(np.sum((diff_x**2))/time_steps) * multiplier_std + \
+                                        np.sqrt(np.sum((diff_y**2))/time_steps) * multiplier_std 
+
             # self.reward = self.reward/self.t
             # print('f',self.reward)
             # self.reward = self.reward*np.abs(4.-self.state[0][0])
@@ -398,7 +427,7 @@ class LandingEnv3D:
             self.track_dev_reward = dev_reward
             # print(forward_reward, height_reward, side_reward, dev_reward)
 
-            return  self.forward_reward_time_step + self.height_reward_time_step + self.side_reward_time_step 
+            return  (self.forward_reward_time_step/self.state[2][0]) + (self.height_reward_time_step/self.state[2][0]) + (self.side_reward_time_step/self.state[2][0])
         
     def reset(self, h0=5.0):
         # Initial state
@@ -418,6 +447,9 @@ class LandingEnv3D:
         self.x_reward = 0.
         self.reward = 0
 
+        self.act_z = []
+        self.act_x = []
+        self.act_y = []
 
         # Counting variables
         self.done = False
